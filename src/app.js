@@ -13,14 +13,13 @@ if (process.env.NODE_ENV !== "production") {
 
 const PORT = process.env.PORT || 5050;
 
-app.get("/", (req, res) => {
-  res.send("hello world");
-});
+const apiRouter = require("./routes/api");
+app.use("/api", apiRouter);
 
 const start = async () => {
   try {
     await mongoose.connect(
-      process.env.CONNECTION
+      process.env.ATLAS_URI
     );
 
     // start the Express server
