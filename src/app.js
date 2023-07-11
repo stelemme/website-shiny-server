@@ -1,6 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
+const cors = require("cors")
 
 const app = express();
 
@@ -10,6 +11,8 @@ mongoose.set("strictQuery", false);
 if (process.env.NODE_ENV !== "production") {
   dotenv.config();
 }
+
+app.use(cors())
 
 const PORT = process.env.PORT || 5050;
 

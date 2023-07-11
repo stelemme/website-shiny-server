@@ -40,9 +40,20 @@ const counterPOST = async (req, res) => {
 const counterIdPUT = async (req, res) => {
   try {
     const counterId = req.params.id;
-    const result = await Counter.replaceOne({ _id: counterId }, req.body);
+    const counter = await Counter.findOneAndReplace({ _id: counterId }, req.body, {new: true});
 
-    res.json(result);
+    res.json({counter});
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const counterIdPATCH = async (req, res) => {
+  try {
+    const counterId = req.params.id;
+    const counter = await Counter.findOneAndUpdate({ _id: counterId }, req.body, {new: true});
+
+    res.json({counter});
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -64,5 +75,6 @@ module.exports = {
   counterIdGET,
   counterPOST,
   counterIdPUT,
+  counterIdPATCH,
   counterIdDELETE,
 };
