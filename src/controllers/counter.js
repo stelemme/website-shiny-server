@@ -3,7 +3,7 @@ const Counter = require("../models/counter");
 const counterGET = async (req, res) => {
   try {
     let query = {};
-    let select = ""
+    let select = "";
     if (req.query.completed) {
       query.completed = req.query.completed;
     }
@@ -11,7 +11,7 @@ const counterGET = async (req, res) => {
       query.trainer = req.query.trainer;
     }
     if (req.query.preview) {
-      select = '-encounters'
+      select = "-encounters";
     }
 
     const counters = await Counter.find(query, select);
@@ -23,7 +23,6 @@ const counterGET = async (req, res) => {
 };
 
 const counterIdGET = async (req, res) => {
-  console.log({ requestParams: req.params });
   try {
     const counterId = req.params.id;
     const counter = await Counter.findById(counterId);
@@ -67,13 +66,28 @@ const counterIdPUT = async (req, res) => {
 const counterIdPATCH = async (req, res) => {
   try {
     const counterId = req.params.id;
-    const increment = await Counter.findById(counterId, "increment")
+    const count = await Counter.findById(counterId, "totalEncounters increment");
+    let counter;
 
-    const counter = await Counter.findOneAndUpdate(
-      { _id: counterId },
-      { $push: { encounters: Date.now()}, $inc: { totalEncounters:  increment.increment}},
-      { new: true }
-    );
+    if (req.query.action === "add") {
+      counter = await Counter.findOneAndUpdate(
+        { _id: counterId },
+        {
+          $push: { encounters: Date.now() },
+          $inc: { totalEncounters: count.increment },
+        },
+        { new: true }
+      );
+    } else if (req.query.action === "undo" && count.totalEncounters > 0) {
+      counter = await Counter.findOneAndUpdate(
+        { _id: counterId },
+        {
+          $pop: { encounters: 1 },
+          $inc: { totalEncounters: -count.increment },
+        },
+        { new: true }
+      );
+    }
 
     res.json({ counter });
   } catch (err) {
