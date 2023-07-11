@@ -54,10 +54,15 @@ counterSchema = new Schema({
   },
   totalEncounters: {
     type: Number,
+    default:0,
     required: true
   },
   encounters: {
     type: [Date],
+    required: true
+  },
+  completed: {
+    type: Boolean,
     required: true
   },
 });
