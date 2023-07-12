@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 
-
 // Importing counters
 const {
   counterGET,
@@ -11,7 +10,6 @@ const {
   counterIdPATCH,
   counterIdDELETE,
 } = require("../controllers/counter");
-
 
 // Assigning controllers to the "/api/counters" URI
 router.get("/counters", counterGET);
@@ -26,8 +24,17 @@ const {
   pokedexGET,
 } = require("../controllers/pokedex");
 
-
 // Assigning controllers to the "/api/pokedex" URI
 router.get("/pokedex", pokedexGET);
+
+// Importing game
+const {
+  gameGET,
+  gameIdGET,
+} = require("../controllers/game");
+
+// Assigning controllers to the "/api/game" URI
+router.get("/game", gameGET);
+router.get("/game/:id", gameIdGET);
 
 module.exports = router;

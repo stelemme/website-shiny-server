@@ -10,11 +10,21 @@ counterSchema = new Schema({
     type: String,
     required: true
   },
+  pokedexNo: {
+    type: Number,
+  },
+  types: {
+    type: [String],
+  },
   pokemonCheck: {
     type: Boolean,
     required: true
   },
   game: {
+    type: String,
+    required: true
+  },
+  gen: {
     type: String,
     required: true
   },
@@ -29,9 +39,8 @@ counterSchema = new Schema({
     },
     category: {
       type: String,
-      required: true
     },
-    prob: {
+    odds: {
       type: Number,
       required: true
     },

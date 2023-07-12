@@ -2,7 +2,12 @@ const Pokedex = require("../models/pokedex");
 
 const pokedexGET = async (req, res) => {
   try {
-    const pokedex = await Pokedex.find();
+    let query = {};
+    if (req.query.name) {
+      query.name = req.query.name;
+    }
+
+    const pokedex = await Pokedex.find(query);
 
     res.json({ pokedex });
   } catch (err) {
