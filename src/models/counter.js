@@ -40,9 +40,21 @@ counterSchema = new Schema({
     category: {
       type: String,
     },
+    function: {
+      type: String,
+    },
+    shinyCharm: {
+      type: Boolean,
+      required: true
+    },
     odds: {
       type: Number,
-      required: true
+    },
+    rolls: {
+      type: Number,
+    },
+    charmRolls: {
+      type: Number,
     },
   },
   sprite: {

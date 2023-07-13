@@ -4,11 +4,12 @@ const gameGET = async (req, res) => {
   try {
     let query = {};
     let select = "";
+    const sort = { sort: 1 }
     if (req.query.action === "form") {
       select = "name gen sprite locations shinyCharm dir methods";
     }
 
-    const game = await Game.find(query, select);
+    const game = await Game.find(query, select).sort(sort);
 
     res.json({ game });
   } catch (err) {

@@ -6,6 +6,10 @@ gameSchema = new Schema({
     type: String,
     required: true
   },
+  sort: {
+    type: Number,
+    required: true
+  },
   gen: {
     type: String,
     required: true
@@ -33,14 +37,21 @@ gameSchema = new Schema({
   methods: [{
     name: {
       type: String,
+      required: true
     },
     function: {
       type: String,
     },
-    subCategories: {
+    categories: {
       type: [String],
     },
     odds: {
+      type: Number,
+    },
+    rolls: {
+      type: Number,
+    },
+    charmRolls: {
       type: Number,
     },
   }],

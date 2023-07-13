@@ -69,6 +69,13 @@ const counterIdPATCH = async (req, res) => {
     const count = await Counter.findById(counterId, "totalEncounters increment");
     let counter;
 
+    if (req.query.action === "shiny") {
+      counter = await Counter.findOneAndUpdate(
+        { _id: counterId },
+        { completed: true },
+        { new: true }
+      )
+    }
     if (req.query.action === "add") {
       counter = await Counter.findOneAndUpdate(
         { _id: counterId },
