@@ -69,6 +69,14 @@ const counterIdPATCH = async (req, res) => {
     const count = await Counter.findById(counterId, "totalEncounters increment");
     let counter;
 
+    if (req.query.action === "csv") {
+
+      counter = await Counter.findOneAndUpdate(
+        { _id: counterId },
+        { encounters: req.body },
+        { new: true }
+      )
+    }
     if (req.query.action === "shiny") {
       counter = await Counter.findOneAndUpdate(
         { _id: counterId },

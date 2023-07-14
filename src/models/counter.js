@@ -73,6 +73,14 @@ counterSchema = new Schema({
     type: Number,
     required: true
   },
+  lowerTimeThreshold: {
+    type: Number,
+    required: true
+  },
+  upperTimeThreshold: {
+    type: Number,
+    required: true
+  },
   totalEncounters: {
     type: Number,
     default:0,

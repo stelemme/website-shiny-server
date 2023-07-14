@@ -1,11 +1,13 @@
 const express = require("express");
+const bodyParser = require('body-parser');
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const cors = require("cors")
 
 const app = express();
 
-app.use(express.json());
+app.use(bodyParser.json({ limit: '2mb' }));
+
 mongoose.set("strictQuery", false);
 
 if (process.env.NODE_ENV !== "production") {
