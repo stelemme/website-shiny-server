@@ -8,6 +8,10 @@ const gameGET = async (req, res) => {
     if (req.query.action === "form") {
       select = "name gen sprite locations shinyCharm dir methods";
     }
+    
+    if (req.query.action === "select") {
+      select = "name gen sprite dir";
+    }
 
     const game = await Game.find(query, select).sort(sort);
 
@@ -23,6 +27,10 @@ const gameIdGET = async (req, res) => {
     let select = "";
     if (req.query.action === "pokemons") {
       select = "pokemons";
+    }
+
+    if (req.query.action === "dir") {
+      select = "name dir";
     }
 
     const game = await Game.findById(gameId, select);
