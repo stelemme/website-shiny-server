@@ -10,7 +10,7 @@ const pokedexGET = async (req, res) => {
     }
     if (req.query.game) {
       try {
-        const response = await axios.get(`http://localhost:3001/api/game/${req.query.game}?action=pokemons`);
+        const response = await axios.get(`https://website-shiny-server.vercel.app/api/game/${req.query.game}?action=pokemons`);
         const gamePokemons = response.data.game.pokemons;
 
         query.name = { $in: gamePokemons };
