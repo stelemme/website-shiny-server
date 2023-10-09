@@ -24,6 +24,10 @@ counterSchema = new Schema({
     type: String,
     required: true
   },
+  gameSort: {
+    type: Number,
+    required: true
+  },
   gen: {
     type: String,
     required: true

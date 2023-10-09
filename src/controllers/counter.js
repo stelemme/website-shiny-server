@@ -1,9 +1,11 @@
 const Counter = require("../models/counter");
+const axios = require('axios');
 
 const counterGET = async (req, res) => {
   try {
     let query = {};
     let select = "";
+    let sort = {}
     if (req.query.completed) {
       query.completed = req.query.completed;
     }
@@ -13,8 +15,32 @@ const counterGET = async (req, res) => {
     if (req.query.preview) {
       select = "-encounters";
     }
+    if (req.query.sort === "gameAsc") {
+      sort.gameSort = "asc"
+      sort.pokedexNo = "asc"
+    }
+    if (req.query.sort === "gameDesc") {
+      sort.gameSort = "desc"
+      sort.pokedexNo = "asc"
+    }
+    if (req.query.sort === "pokedexNoAsc") {
+      sort.pokedexNo = "asc"
+    }
+    if (req.query.sort === "pokedexNoDesc") {
+      sort.pokedexNo = "asc"
+    }
+    if (req.query.sort === "newest") {
+    }
+    if (req.query.sort === "oldest") {
+    }
+    if (req.query.sort === "encAsc") {
+      sort.totalEncounters = "desc"
+    }
+    if (req.query.sort === "encDesc") {
+      sort.totalEncounters = "asc"
+    }
 
-    const counters = await Counter.find(query, select);
+    const counters = await Counter.find(query, select).sort(sort);
 
     res.json({ counters });
   } catch (err) {
@@ -66,9 +92,28 @@ const counterIdPUT = async (req, res) => {
 const counterIdPATCH = async (req, res) => {
   try {
     const counterId = req.params.id;
-    const count = await Counter.findById(counterId, "totalEncounters increment");
+    const count = await Counter.findById(counterId, "totalEncounters increment game");
     let counter;
 
+    let game
+
+    if (req.query.action === "gameSort") {
+      try {
+        const response = await axios.get(`https://website-shiny-server.vercel.app/api/game`);
+        const gameList = response.data.game;
+
+        game = gameList.find((g) => g.name === count.game)
+
+      } catch (error) {
+        console.log(error);
+      }
+
+      counter = await Counter.findOneAndUpdate(
+        { _id: counterId },
+        { gameSort: game.sort },
+        { new: true }
+      )
+    }
     if (req.query.action === "csv") {
 
       counter = await Counter.findOneAndUpdate(

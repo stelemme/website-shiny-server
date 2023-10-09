@@ -37,4 +37,14 @@ const {
 router.get("/game", gameGET);
 router.get("/game/:id", gameIdGET);
 
+// Importing user
+const {
+  userGET,
+  userPATCH,
+} = require("../controllers/user");
+
+// Assigning controllers to the "/api/user" URI
+router.get("/user", userGET);
+router.patch("/user", userPATCH);
+
 module.exports = router;
