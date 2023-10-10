@@ -18,6 +18,14 @@ userSchema = new Schema({
     type: String,
     required: true
   },
+  ongoingCounterSortAll: {
+    type: String,
+    required: true
+  },
+  completedCounterSortAll: {
+    type: String,
+    required: true
+  },
 });
 
 module.exports = mongoose.model("User", userSchema);

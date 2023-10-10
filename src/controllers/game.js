@@ -6,7 +6,7 @@ const gameGET = async (req, res) => {
     let select = "";
     const sort = { sort: 1 }
     if (req.query.action === "form") {
-      select = "name gen sprite locations shinyCharm dir methods";
+      select = "name gen sprite locations shinyCharm dir methods sort";
     }
     
     if (req.query.action === "select") {

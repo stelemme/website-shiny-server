@@ -11,7 +11,7 @@ const userGET = async (req, res) => {
       select = "user colorMode";
     }
     if (req.query.action === "counterSort") {
-      select = "user ongoingCounterSort completedCounterSort";
+      select = "user ongoingCounterSort completedCounterSort ongoingCounterSortAll completedCounterSortAll";
     }
 
     const user = await User.findOne(query, select);
@@ -43,6 +43,12 @@ const userPATCH = async (req, res) => {
     }
     if (req.query.completedCounterSort) {
       user = await User.findOneAndUpdate(query, {completedCounterSort: req.query.completedCounterSort}, { new: true })
+    }
+    if (req.query.ongoingCounterSortAll) {
+      user = await User.findOneAndUpdate(query, {ongoingCounterSortAll: req.query.ongoingCounterSortAll}, { new: true })
+    }
+    if (req.query.completedCounterSortAll) {
+      user = await User.findOneAndUpdate(query, {completedCounterSortAll: req.query.completedCounterSortAll}, { new: true })
     }
 
     res.json({ user });
