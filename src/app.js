@@ -21,10 +21,6 @@ const PORT = process.env.PORT || 5050;
 const apiRouter = require("./routes/api");
 app.use("/api", apiRouter);
 
-app.get('/', (req, res) => {
-  res.send('homepage')
-})
-
 const start = async () => {
   try {
     await mongoose.connect(

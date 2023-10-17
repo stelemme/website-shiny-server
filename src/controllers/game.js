@@ -5,8 +5,12 @@ const gameGET = async (req, res) => {
     let query = {};
     let select = "";
     const sort = { sort: 1 }
+    if (req.query.name) {
+      query.name = req.query.name;
+    }
+    
     if (req.query.action === "form") {
-      select = "name gen sprite locations shinyCharm dir methods sort";
+      select = "name gen sprite locations shinyCharm dir methods sort balls";
     }
     
     if (req.query.action === "select") {
@@ -34,6 +38,8 @@ const gameIdGET = async (req, res) => {
     }
 
     const game = await Game.findById(gameId, select);
+
+    console.log(game)
 
     if (!game) {
       res.status(404).json({ error: "Game not found" });

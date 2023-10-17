@@ -22,10 +22,16 @@ gameSchema = new Schema({
     type: String,
     required: true
   },
-  balls: {
-    type: [String],
-    required: true
-  },
+  balls: [{
+    name: {
+      type: String,
+      required: true
+    },
+    sprite: {
+      type: String,
+      required: true
+    },
+  }],
   locations: {
     type: [String],
     required: true

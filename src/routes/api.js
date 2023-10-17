@@ -37,6 +37,20 @@ const {
 router.get("/game", gameGET);
 router.get("/game/:id", gameIdGET);
 
+// Importing shiny
+const {
+  shinyGET,
+  shinyIdGET,
+  shinyPOST,
+  shinyIdDELETE
+} = require("../controllers/shiny");
+
+// Assigning controllers to the "/api/user" URI
+router.get("/shiny", shinyGET);
+router.get("/shiny/:id", shinyIdGET);
+router.post("/shiny", shinyPOST);
+router.delete("/shiny/:id", shinyIdDELETE);
+
 // Importing user
 const {
   userGET,

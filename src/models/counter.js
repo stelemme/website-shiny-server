@@ -16,10 +16,6 @@ counterSchema = new Schema({
   types: {
     type: [String],
   },
-  pokemonCheck: {
-    type: Boolean,
-    required: true
-  },
   game: {
     type: String,
     required: true
@@ -100,10 +96,6 @@ counterSchema = new Schema({
   },
   endDate: {
     type: Date,
-    required: true
-  },
-  completed: {
-    type: Boolean,
     required: true
   },
 });

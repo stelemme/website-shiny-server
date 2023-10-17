@@ -6,14 +6,11 @@ const counterGET = async (req, res) => {
     let query = {};
     let select = "";
     let sort = {}
-    if (req.query.completed) {
-      query.completed = req.query.completed;
-    }
     if (req.query.trainer) {
       query.trainer = req.query.trainer;
     }
     if (req.query.preview) {
-      select = "-encounters";
+      select = "name sprite count trainer totalEncounters";
     }
     if (req.query.sort === "gameAsc") {
       sort.gameSort = "asc"
@@ -110,6 +107,25 @@ const counterIdPATCH = async (req, res) => {
       )
     }
 
+    if (req.query.action === "dateEdit") {
+      counter = await Counter.findOneAndUpdate(
+        { _id: counterId },
+        {
+          startDate: req.body.startDate,
+          endDate: req.body.endDate
+        },
+        { new: true }
+      )
+    }
+
+    if (req.query.action === "encounterEdit") {
+      counter = await Counter.findOneAndUpdate(
+        { _id: counterId },
+        { totalEncounters: req.body.count },
+        { new: true }
+      )
+    }
+
     if (req.query.action === "gameSort") {
       try {
         const response = await axios.get(`https://website-shiny-server.vercel.app/api/game`);
@@ -133,13 +149,6 @@ const counterIdPATCH = async (req, res) => {
       counter = await Counter.findOneAndUpdate(
         { _id: counterId },
         { encounters: req.body },
-        { new: true }
-      )
-    }
-    if (req.query.action === "shiny") {
-      counter = await Counter.findOneAndUpdate(
-        { _id: counterId },
-        { completed: true },
         { new: true }
       )
     }
