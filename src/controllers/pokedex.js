@@ -33,7 +33,21 @@ const pokedexGET = async (req, res) => {
       ))
     }
 
-    res.json({ pokedex });
+
+    if (req.query.pokemonList) {
+      const pokemonList = await Pokedex.find({}, 'name')
+      const names = pokemonList.map(pokemon => pokemon.name);
+      res.json({ pokemonList: names });
+    } else if (req.query.formsList) {
+      const formsList = await Pokedex.find({}, 'forms.name')
+      const names = formsList.reduce((accumulator, pokemon) => {
+        const formNames = pokemon.forms.map(form => form.name);
+        return accumulator.concat(formNames);
+      }, []);
+      res.json({ formsList: names });
+    } else {
+      res.json({ pokedex });
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

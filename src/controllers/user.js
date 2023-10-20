@@ -13,6 +13,9 @@ const userGET = async (req, res) => {
     if (req.query.action === "counterSort") {
       select = "user ongoingCounterSort completedCounterSort ongoingCounterSortAll completedCounterSortAll";
     }
+    if (req.query.action === "shiniesSort") {
+      select = "user shiniesSort";
+    }
 
     const user = await User.findOne(query, select);
 
@@ -49,6 +52,9 @@ const userPATCH = async (req, res) => {
     }
     if (req.query.completedCounterSortAll) {
       user = await User.findOneAndUpdate(query, {completedCounterSortAll: req.query.completedCounterSortAll}, { new: true })
+    }
+    if (req.query.shiniesSort) {
+      user = await User.findOneAndUpdate(query, {shiniesSort: req.query.shiniesSort}, { new: true })
     }
 
     res.json({ user });

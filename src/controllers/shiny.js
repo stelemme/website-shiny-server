@@ -3,7 +3,7 @@ const Shiny = require("../models/shiny");
 const shinyGET = async (req, res) => {
   try {
     let query = {};
-    let select = "";
+    let select = "-encounters";
     const sort = {}
 
     if (req.query.trainer) {
@@ -12,8 +12,11 @@ const shinyGET = async (req, res) => {
     if (req.query.action === "counters") {
       query.totalEncounters = { $gt: 0 }
     }
-    if (req.query.preview) {
-      select = "name sprite count trainer totalEncounters";
+    if (req.query.preview === "counter") {
+      select = "name gameSort pokedexNo endDate sprite.game trainer totalEncounters";
+    }
+    if (req.query.preview === "shiny") {
+      select = "name gameSort pokedexNo endDate sprite trainer";
     }
     if (req.query.sort === "gameAsc") {
       sort.gameSort = "asc"
@@ -42,9 +45,13 @@ const shinyGET = async (req, res) => {
       sort.totalEncounters = "asc"
     }
 
-    const shiny = await Shiny.find(query, select).sort(sort);
-
-    res.json({ shiny });
+    if (req.query.group) {
+      const groups = await Shiny.distinct("group");
+      res.json({ groups });
+    } else {
+      const shiny = await Shiny.find(query, select).sort(sort);
+      res.json({ shiny });
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -52,14 +59,16 @@ const shinyGET = async (req, res) => {
 
 const shinyIdGET = async (req, res) => {
   try {
+    let select = "";
     const shinyId = req.params.id;
-    const shiny = await Shiny.findById(shinyId);
 
-    if (!shiny) {
-      res.status(404).json({ error: "Shiny not found" });
-    } else {
-      res.json({ shiny });
+    if (req.query.action === "noEncounters") {
+      select="-encounters"
     }
+
+    const shiny = await Shiny.findById(shinyId, select);
+
+    res.json({ shiny });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

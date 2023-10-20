@@ -10,7 +10,7 @@ const counterGET = async (req, res) => {
       query.trainer = req.query.trainer;
     }
     if (req.query.preview) {
-      select = "name sprite count trainer totalEncounters";
+      select = "name gameSort pokedexNo endDate sprite.game trainer totalEncounters";
     }
     if (req.query.sort === "gameAsc") {
       sort.gameSort = "asc"

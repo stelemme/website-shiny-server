@@ -84,6 +84,36 @@ shinySchema = new Schema({
     correctedEncounters: {
       type: Number,
     },
+    lure: {
+      type: Boolean,
+    },
+    chainMatters: {
+      type: Boolean,
+    },
+    letsGoChain: {
+      type: Number,
+    },
+    sosChain: {
+      type: Number,
+    },
+    radarChain: {
+      type: Number,
+    },
+    researchLevel: {
+      type: String,
+    },
+    svOutbreak: {
+      type: String,
+    },
+    svSparklingPower: {
+      type: String,
+    },
+    group: {
+      type: Boolean,
+    },
+  },
+  group: {
+    type: String,
   },
   sprite: {
     game: {
@@ -129,14 +159,6 @@ shinySchema = new Schema({
   },
   endDate: {
     type: Date,
-    required: true
-  },
-  evolutions: {
-    type: [String],
-    required: true
-  },
-  forms: {
-    type: [String],
     required: true
   },
   evolutions: [{
