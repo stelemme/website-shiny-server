@@ -56,6 +56,9 @@ counterSchema = new Schema({
     charmRolls: {
       type: Number,
     },
+    searchLevel: {
+      type: Number,
+    },
   },
   sprite: {
     game: {

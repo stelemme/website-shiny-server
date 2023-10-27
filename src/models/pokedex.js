@@ -40,6 +40,9 @@ pokedexSchema = new Schema({
     name: {
       type: String,
     },
+    pokedexNo: {
+      type: Number,
+    },
   }],
 });
 

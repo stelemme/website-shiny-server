@@ -39,9 +39,24 @@ const counterGET = async (req, res) => {
       sort.totalEncounters = "asc"
     }
 
-    const counters = await Counter.find(query, select).sort(sort);
-
-    res.json({ counters });
+    if (req.query.action === "latest") {
+      sort.endDate = "desc"
+      const counters = await Counter.find(query, select).sort(sort).limit(Number(req.query.amount));
+      res.json({ counters })
+    } else if (req.query.trainers) {
+      sort.endDate = "desc"
+      const valuesArray = req.query.trainers.split(',');
+      let counters = []
+      for (const element of valuesArray) {
+        query.trainer = element;
+        const userCounters = await Counter.find(query, select).sort(sort).limit(Number(req.query.amount));
+        counters.push(userCounters[0])
+      }
+      res.json({ counters });
+    } else {
+      const counters = await Counter.find(query, select).sort(sort);
+      res.json({ counters });
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -125,6 +140,13 @@ const counterIdPATCH = async (req, res) => {
         { new: true }
       )
     }
+    if (req.query.action === "searchLevelEdit") {
+      counter = await Counter.findOneAndUpdate(
+        { _id: counterId },
+        { "method.searchLevel": req.body.searchLevel },
+        { new: true }
+      )
+    }
 
     if (req.query.action === "gameSort") {
       try {
@@ -145,7 +167,6 @@ const counterIdPATCH = async (req, res) => {
     }
 
     if (req.query.action === "csv") {
-
       counter = await Counter.findOneAndUpdate(
         { _id: counterId },
         { encounters: req.body },
@@ -159,6 +180,14 @@ const counterIdPATCH = async (req, res) => {
           $push: { encounters: Date.now() },
           $inc: { totalEncounters: count.increment },
           endDate: Date.now()
+        },
+        { new: true }
+      );
+    } else if (req.query.action === "addSearchLevel") {
+      counter = await Counter.findOneAndUpdate(
+        { _id: counterId },
+        {
+          $inc: { "method.searchLevel": 1 },
         },
         { new: true }
       );

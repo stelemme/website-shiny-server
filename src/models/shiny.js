@@ -192,6 +192,10 @@ shinySchema = new Schema({
       type: String,
       required: true
     },
+    pokedexNo: {
+      type: Number,
+      required: true
+    }
   }],
   stats: {
     probability: {

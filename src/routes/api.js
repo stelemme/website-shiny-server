@@ -42,6 +42,7 @@ const {
   shinyGET,
   shinyIdGET,
   shinyPOST,
+  shinyIdPATCH,
   shinyIdDELETE
 } = require("../controllers/shiny");
 
@@ -49,6 +50,7 @@ const {
 router.get("/shiny", shinyGET);
 router.get("/shiny/:id", shinyIdGET);
 router.post("/shiny", shinyPOST);
+router.patch("/shiny/:id", shinyIdPATCH);
 router.delete("/shiny/:id", shinyIdDELETE);
 
 // Importing user

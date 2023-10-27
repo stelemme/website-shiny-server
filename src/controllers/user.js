@@ -16,10 +16,17 @@ const userGET = async (req, res) => {
     if (req.query.action === "shiniesSort") {
       select = "user shiniesSort";
     }
+    
+    if (req.query.userList) {
+      const userList = await User.find({}, 'user')
+      const names = userList.map(user => user.user);
 
-    const user = await User.findOne(query, select);
-
-    res.json({ user });
+      res.json({ userList: names });
+    } else {
+      const user = await User.findOne(query, select);
+      
+      res.json({ user });
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

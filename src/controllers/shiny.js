@@ -6,6 +6,9 @@ const shinyGET = async (req, res) => {
     let select = "-encounters";
     const sort = {}
 
+    if (req.query.all) {
+      select = ""
+    }
     if (req.query.trainer) {
       query.trainer = req.query.trainer;
     }
@@ -47,9 +50,86 @@ const shinyGET = async (req, res) => {
 
     if (req.query.group) {
       const groups = await Shiny.distinct("group");
+
       res.json({ groups });
+    } else if (req.query.action === "latest") {
+      sort.endDate = "desc"
+      const shinies = await Shiny.find(query, "name sprite endDate trainer").sort(sort).limit(Number(req.query.amount));
+
+      res.json({ shinies })
+    } else if (req.query.action === "userStats") {
+      const responses = {};
+
+      responses.first = await Shiny.find(query, "name sprite endDate trainer").sort({ endDate: "asc" }).limit(Number(req.query.amount));
+      responses.mostEncounters = await Shiny.find(query, "name sprite totalEncounters trainer").sort({ totalEncounters: "desc" }).limit(Number(req.query.amount));
+      responses.longestHunt = await Shiny.find(query, "name sprite stats trainer").sort({ 'stats.totalHuntTime': "desc" }).limit(Number(req.query.amount));
+      responses.mostDays = await Shiny.find(query, "name sprite stats trainer").sort({ 'stats.daysHunting': "desc" }).limit(Number(req.query.amount));
+
+      query.totalEncounters = { $gt: 0 }
+      responses.lowestEncounters = await Shiny.find(query, "name sprite totalEncounters trainer").sort({ totalEncounters: "asc" }).limit(Number(req.query.amount));
+      delete query.totalEncounters
+
+      query['stats.totalHuntTime'] = { $gt: 0 }
+      responses.shortestHunt = await Shiny.find(query, "name sprite stats trainer").sort({ 'stats.totalHuntTime': "asc" }).limit(Number(req.query.amount));
+
+      res.json(responses);
+    } else if (req.query.trainers) {
+      sort.endDate = "desc"
+      const valuesArray = req.query.trainers.split(',');
+      let shinies = []
+      for (const element of valuesArray) {
+        query.trainer = element;
+        const userShinies = await Shiny.find(query, "name sprite endDate trainer").sort(sort).limit(Number(req.query.amount));
+        shinies.push(userShinies[0])
+      }
+
+      res.json({ shinies });
+    } else if (req.query.encountersList) {
+      query.totalEncounters = { $gt: 0 }
+      const encountersList = await Shiny.find(query, 'totalEncounters stats method')
+      const encounters = encountersList.map(shiny => {
+        if (shiny.method?.correctedEncounters) {
+          return Math.round(shiny.method.correctedEncounters * 8192 / shiny.stats.probability)
+        }
+        return Math.round(shiny.totalEncounters * 8192 / shiny.stats.probability)
+      });
+
+      const rangeSize = 1000
+
+      const result = encounters.reduce((acc, number) => {
+        const lowerBound = Math.floor((number - 1) / rangeSize) * rangeSize + 1;
+        const upperBound = lowerBound + rangeSize - 1;
+        const rangeName = `${upperBound}`;
+
+        const existingRange = acc.find((item) => item.name === rangeName);
+
+        if (existingRange) {
+          existingRange.amount++;
+        } else {
+          acc.push({ name: rangeName, amount: 1, expected: Math.round((((1 - ((8191 / 8192) ** upperBound)) - (1 - ((8191 / 8192) ** (upperBound - 1000)))) * encounters.length) * 100) / 100 });
+        }
+
+        return acc;
+      }, []);
+
+      for (let lowerBound = 1; lowerBound <= 56000; lowerBound += rangeSize) {
+        const upperBound = lowerBound + rangeSize - 1;
+        const rangeName = `${upperBound}`;
+        if (!result.find((item) => item.name === rangeName)) {
+          result.push({ name: rangeName, amount: 0, expected: Math.round((((1 - ((8191 / 8192) ** upperBound)) - (1 - ((8191 / 8192) ** (upperBound - 1000)))) * encounters.length) * 100) / 100 });
+        }
+      }
+
+      result.sort((a, b) => {
+        const rangeA = a.name.split('-').map(Number);
+        const rangeB = b.name.split('-').map(Number);
+        return rangeA[0] - rangeB[0];
+      });
+
+      res.json({ result });
     } else {
       const shiny = await Shiny.find(query, select).sort(sort);
+
       res.json({ shiny });
     }
   } catch (err) {
@@ -63,7 +143,7 @@ const shinyIdGET = async (req, res) => {
     const shinyId = req.params.id;
 
     if (req.query.action === "noEncounters") {
-      select="-encounters"
+      select = "-encounters"
     }
 
     const shiny = await Shiny.findById(shinyId, select);
@@ -85,6 +165,27 @@ const shinyPOST = async (req, res) => {
   }
 };
 
+const shinyIdPATCH = async (req, res) => {
+  try {
+    const shinyId = req.params.id;
+
+    if (req.query.action === "evolutionsEdit") {
+      shiny = await Shiny.findOneAndUpdate(
+        { _id: shinyId },
+        {
+          evolutions: req.body.evolutions,
+          forms: req.body.forms
+        },
+        { new: true }
+      )
+    }
+
+    res.json({ shiny })
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 const shinyIdDELETE = async (req, res) => {
   try {
     const shinyId = req.params.id;
@@ -100,5 +201,6 @@ module.exports = {
   shinyGET,
   shinyIdGET,
   shinyPOST,
+  shinyIdPATCH,
   shinyIdDELETE
 };
