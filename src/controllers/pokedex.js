@@ -6,13 +6,16 @@ const pokedexGET = async (req, res) => {
   try {
     let query = {};
     const sort = { pokedexNo: 1 }
+
+    /* FILTERS */
     if (req.query.name) {
       query.name = req.query.name;
     }
+
+    /* FILTER IF IN GAME */
     if (req.query.game) {
       try {
         const response = await Game.findById(req.query.game, "pokemons");
-
         const gamePokemons = response.data.game.pokemons;
 
         query.name = { $in: gamePokemons };
@@ -21,26 +24,14 @@ const pokedexGET = async (req, res) => {
       }
     }
 
-    const pokedex = await Pokedex.find(query).sort(sort);
-
-    if (req.query.action === "forms") {
-      forms = [].concat(
-        ...pokedex
-          .map(pokemon => pokemon.forms)
-          .filter(formsArray => formsArray.length > 0)
-      );
-
-      pokedex.push(...forms.filter((item, index, array) =>
-        array.findIndex((other) => other.name === item.name) === index
-      ))
-    }
-
-
+    /* RETURNS A LIST OF POKEMONS */
     if (req.query.pokemonList) {
       const pokemonList = await Pokedex.find({}, 'name')
       const names = pokemonList.map(pokemon => pokemon.name);
 
       res.json({ pokemonList: names });
+
+    /* RETURNS A LIST OF FORMS */
     } else if (req.query.formsList) {
       const formsList = await Pokedex.find({}, 'forms.name')
       const names = formsList.reduce((accumulator, pokemon) => {
@@ -49,6 +40,8 @@ const pokedexGET = async (req, res) => {
       }, []);
 
       res.json({ formsList: names });
+
+      /* RETURNS A LIST OF FORMS & EVOLUTIONS OF A CERTAIN POKEMON */
     } else if (req.query.evolutions) {
       const pokemon = await Pokedex.find(query, 'name pokedexNo evolutions types forms sprite')
 
@@ -58,6 +51,12 @@ const pokedexGET = async (req, res) => {
 
       const evolutions = []
       const forms = []
+
+      for (const form of pokemon[0].forms) {
+        if (formList.includes(form.name)) {
+          forms.push(form)
+        }
+      }
 
       for (const name of pokemon[0].evolutions) {
         query.name = name
@@ -76,8 +75,25 @@ const pokedexGET = async (req, res) => {
       }
 
       res.json({ forms: forms, evolutions: evolutions })
+
+      /* POKEDEX RESPONSE */
     } else {
-      res.json({ pokedex });
+      const pokedex = await Pokedex.find(query).sort(sort);
+
+      /* ADD FORMS TO POKEDEX */
+      if (req.query.action === "forms") {
+        forms = [].concat(
+          ...pokedex
+            .map(pokemon => pokemon.forms)
+            .filter(formsArray => formsArray.length > 0)
+        );
+
+        pokedex.push(...forms.filter((item, index, array) =>
+          array.findIndex((other) => other.name === item.name) === index
+        ))
+      }
+      
+      res.json(pokedex);
     }
   } catch (err) {
     res.status(500).json({ error: err.message });

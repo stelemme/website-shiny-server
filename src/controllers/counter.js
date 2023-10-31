@@ -1,17 +1,21 @@
 const Counter = require("../models/counter");
-const axios = require('axios');
+const User = require("../models/user");
 
 const counterGET = async (req, res) => {
   try {
     let query = {};
     let select = "";
     let sort = {}
+
+    /* FILTERS */
     if (req.query.trainer) {
       query.trainer = req.query.trainer;
     }
     if (req.query.preview) {
       select = "name gameSort pokedexNo endDate sprite.game trainer totalEncounters";
     }
+
+    /* SORTING */
     if (req.query.sort === "gameAsc") {
       sort.gameSort = "asc"
       sort.pokedexNo = "asc"
@@ -39,23 +43,25 @@ const counterGET = async (req, res) => {
       sort.totalEncounters = "asc"
     }
 
-    if (req.query.action === "latest") {
-      sort.endDate = "desc"
-      const counters = await Counter.find(query, select).sort(sort).limit(Number(req.query.amount));
-      res.json({ counters })
-    } else if (req.query.trainers) {
-      sort.endDate = "desc"
-      const valuesArray = req.query.trainers.split(',');
+    /* LATEST COUNTERS RESPONSE*/
+    if (req.query.trainers) {
+      const userList = await User.find({}, 'user')
+      const names = userList.map(user => user.user);
+
       let counters = []
-      for (const element of valuesArray) {
+      for (const element of names) {
         query.trainer = element;
         const userCounters = await Counter.find(query, select).sort(sort).limit(Number(req.query.amount));
         counters.push(userCounters[0])
       }
-      res.json({ counters });
+
+      res.json(counters);
+
+      /* COUNTERS RESPONSE */
     } else {
       const counters = await Counter.find(query, select).sort(sort);
-      res.json({ counters });
+
+      res.json(counters);
     }
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -67,11 +73,7 @@ const counterIdGET = async (req, res) => {
     const counterId = req.params.id;
     const counter = await Counter.findById(counterId);
 
-    if (!counter) {
-      res.status(404).json({ error: "Counter not found" });
-    } else {
-      res.json({ counter });
-    }
+    res.json(counter);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -82,7 +84,7 @@ const counterPOST = async (req, res) => {
   try {
     await counter.save();
 
-    res.status(201).json({ counter });
+    res.status(201).json(counter);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -97,7 +99,7 @@ const counterIdPUT = async (req, res) => {
       { new: true }
     );
 
-    res.json({ counter });
+    res.json(counter);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -108,9 +110,9 @@ const counterIdPATCH = async (req, res) => {
     const counterId = req.params.id;
     const count = await Counter.findById(counterId, "totalEncounters increment");
     let counter;
-
     let game
 
+    /* INITIALIZE DATES FROM CSV (NOT USED ANYMORE) */
     if (req.query.action === "dateFix") {
       counter = await Counter.findOneAndUpdate(
         { _id: counterId },
@@ -122,6 +124,7 @@ const counterIdPATCH = async (req, res) => {
       )
     }
 
+    /* EDIT START & END DATE */
     if (req.query.action === "dateEdit") {
       counter = await Counter.findOneAndUpdate(
         { _id: counterId },
@@ -133,6 +136,7 @@ const counterIdPATCH = async (req, res) => {
       )
     }
 
+    /* EDIT ENCOUNTERS */
     if (req.query.action === "encounterEdit") {
       counter = await Counter.findOneAndUpdate(
         { _id: counterId },
@@ -140,6 +144,8 @@ const counterIdPATCH = async (req, res) => {
         { new: true }
       )
     }
+
+    /* EDIT SEARCHLEVEL */
     if (req.query.action === "searchLevelEdit") {
       counter = await Counter.findOneAndUpdate(
         { _id: counterId },
@@ -148,24 +154,7 @@ const counterIdPATCH = async (req, res) => {
       )
     }
 
-    if (req.query.action === "gameSort") {
-      try {
-        const response = await axios.get(`https://website-shiny-server.vercel.app/api/game`);
-        const gameList = response.data.game;
-
-        game = gameList.find((g) => g.name === count.game)
-
-      } catch (error) {
-        console.log(error);
-      }
-
-      counter = await Counter.findOneAndUpdate(
-        { _id: counterId },
-        { gameSort: game.sort },
-        { new: true }
-      )
-    }
-
+    /* EDIT ENCOUNTERS WITH CSV */
     if (req.query.action === "csv") {
       counter = await Counter.findOneAndUpdate(
         { _id: counterId },
@@ -173,6 +162,8 @@ const counterIdPATCH = async (req, res) => {
         { new: true }
       )
     }
+
+    /* INCREMENT THE COUNT */
     if (req.query.action === "add") {
       counter = await Counter.findOneAndUpdate(
         { _id: counterId },
@@ -183,7 +174,10 @@ const counterIdPATCH = async (req, res) => {
         },
         { new: true }
       );
-    } else if (req.query.action === "addSearchLevel") {
+    } 
+    
+    /* INCREMENT SEARCHLEVEL */
+    if (req.query.action === "addSearchLevel") {
       counter = await Counter.findOneAndUpdate(
         { _id: counterId },
         {
@@ -191,7 +185,10 @@ const counterIdPATCH = async (req, res) => {
         },
         { new: true }
       );
-    } else if (req.query.action === "undo" && count.totalEncounters > 0) {
+    }
+    
+    /* UNDO A COUNT */
+    if (req.query.action === "undo" && count.totalEncounters > 0) {
       const encounters = await Counter.findById(counterId, "encounters");
       counter = await Counter.findOneAndUpdate(
         { _id: counterId },
@@ -204,7 +201,7 @@ const counterIdPATCH = async (req, res) => {
       );
     }
 
-    res.json({ counter });
+    res.json(counter);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

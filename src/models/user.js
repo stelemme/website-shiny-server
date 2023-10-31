@@ -30,6 +30,12 @@ userSchema = new Schema({
     type: String,
     required: true
   },
+  shiniesFilter: {
+    trainer: {
+      type: String,
+      required: true
+    },
+  }
 });
 
 module.exports = mongoose.model("User", userSchema);

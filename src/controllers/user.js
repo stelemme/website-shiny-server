@@ -4,67 +4,24 @@ const userGET = async (req, res) => {
   try {
     let query = {};
     let select = "";
+
+    /* FILTERS */
     if (req.query.user) {
       query.user = req.query.user;
     }
-    if (req.query.action === "colorMode") {
-      select = "user colorMode";
-    }
-    if (req.query.action === "counterSort") {
-      select = "user ongoingCounterSort completedCounterSort ongoingCounterSortAll completedCounterSortAll";
-    }
-    if (req.query.action === "shiniesSort") {
-      select = "user shiniesSort";
-    }
-    
+
+    /* RETURNS A LIST OF USERS */
     if (req.query.userList) {
       const userList = await User.find({}, 'user')
       const names = userList.map(user => user.user);
 
-      res.json({ userList: names });
+      res.json(names);
     } else {
+      /* USER RESPONSE */
       const user = await User.findOne(query, select);
       
-      res.json({ user });
+      res.json(user);
     }
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-const userPATCH = async (req, res) => {
-  try {
-    let query = {};
-    if (req.query.user) {
-      query.user = req.query.user;
-    }
-
-    let user;
-
-    if (req.query.action === "colorMode") {
-      const userColorMode = await User.findOne(query, "colorMode");
-
-      const newColorMode = userColorMode.colorMode === "light" ? "dark" : "light";
-
-      user = await User.findOneAndUpdate(query, {colorMode: newColorMode}, { new: true })
-    }
-    if (req.query.ongoingCounterSort) {
-      user = await User.findOneAndUpdate(query, {ongoingCounterSort: req.query.ongoingCounterSort}, { new: true })
-    }
-    if (req.query.completedCounterSort) {
-      user = await User.findOneAndUpdate(query, {completedCounterSort: req.query.completedCounterSort}, { new: true })
-    }
-    if (req.query.ongoingCounterSortAll) {
-      user = await User.findOneAndUpdate(query, {ongoingCounterSortAll: req.query.ongoingCounterSortAll}, { new: true })
-    }
-    if (req.query.completedCounterSortAll) {
-      user = await User.findOneAndUpdate(query, {completedCounterSortAll: req.query.completedCounterSortAll}, { new: true })
-    }
-    if (req.query.shiniesSort) {
-      user = await User.findOneAndUpdate(query, {shiniesSort: req.query.shiniesSort}, { new: true })
-    }
-
-    res.json({ user });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -72,5 +29,4 @@ const userPATCH = async (req, res) => {
 
 module.exports = {
   userGET,
-  userPATCH,
 };

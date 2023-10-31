@@ -1,4 +1,5 @@
 const Shiny = require("../models/shiny");
+const User = require("../models/user");
 
 const shinyGET = async (req, res) => {
   try {
@@ -6,6 +7,7 @@ const shinyGET = async (req, res) => {
     let select = "-encounters";
     const sort = {}
 
+    /* FILTERS */
     if (req.query.all) {
       select = ""
     }
@@ -21,6 +23,8 @@ const shinyGET = async (req, res) => {
     if (req.query.preview === "shiny") {
       select = "name gameSort pokedexNo endDate sprite trainer";
     }
+
+    /* SORTS */
     if (req.query.sort === "gameAsc") {
       sort.gameSort = "asc"
       sort.pokedexNo = "asc"
@@ -48,15 +52,13 @@ const shinyGET = async (req, res) => {
       sort.totalEncounters = "asc"
     }
 
+    /* RETURNS GROUPS FOR RADAR */
     if (req.query.group) {
       const groups = await Shiny.distinct("group");
 
-      res.json({ groups });
-    } else if (req.query.action === "latest") {
-      sort.endDate = "desc"
-      const shinies = await Shiny.find(query, "name sprite endDate trainer").sort(sort).limit(Number(req.query.amount));
+      res.json(groups);
 
-      res.json({ shinies })
+      /* RETURNS THE USER STATS */
     } else if (req.query.action === "userStats") {
       const responses = {};
 
@@ -73,17 +75,22 @@ const shinyGET = async (req, res) => {
       responses.shortestHunt = await Shiny.find(query, "name sprite stats trainer").sort({ 'stats.totalHuntTime': "asc" }).limit(Number(req.query.amount));
 
       res.json(responses);
+
+      /* RETURNS LATEST SHINIES*/
     } else if (req.query.trainers) {
-      sort.endDate = "desc"
-      const valuesArray = req.query.trainers.split(',');
+      const userList = await User.find({}, 'user')
+      const names = userList.map(user => user.user);
+
       let shinies = []
-      for (const element of valuesArray) {
+      for (const element of names) {
         query.trainer = element;
         const userShinies = await Shiny.find(query, "name sprite endDate trainer").sort(sort).limit(Number(req.query.amount));
         shinies.push(userShinies[0])
       }
 
-      res.json({ shinies });
+      res.json(shinies);
+
+      /* RETURNS A LIST FOR THE ENC. GRAPH */
     } else if (req.query.encountersList) {
       query.totalEncounters = { $gt: 0 }
       const encountersList = await Shiny.find(query, 'totalEncounters stats method')
@@ -126,11 +133,12 @@ const shinyGET = async (req, res) => {
         return rangeA[0] - rangeB[0];
       });
 
-      res.json({ result });
+      res.json(result);
     } else {
+      /* SHINY RESPONSE */
       const shiny = await Shiny.find(query, select).sort(sort);
 
-      res.json({ shiny });
+      res.json(shiny);
     }
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -142,13 +150,15 @@ const shinyIdGET = async (req, res) => {
     let select = "";
     const shinyId = req.params.id;
 
+    /* FILTERS */
     if (req.query.action === "noEncounters") {
       select = "-encounters"
     }
 
+    /* SHINY RESPONSE */
     const shiny = await Shiny.findById(shinyId, select);
 
-    res.json({ shiny });
+    res.json(shiny);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -159,7 +169,7 @@ const shinyPOST = async (req, res) => {
   try {
     await shiny.save();
 
-    res.status(201).json({ shiny });
+    res.status(201).json(shiny);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -180,7 +190,7 @@ const shinyIdPATCH = async (req, res) => {
       )
     }
 
-    res.json({ shiny })
+    res.json(shiny)
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
