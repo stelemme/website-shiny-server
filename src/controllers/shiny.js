@@ -21,8 +21,28 @@ const shinyGET = async (req, res) => {
       select = "name gameSort pokedexNo endDate sprite.game trainer totalEncounters";
     }
     if (req.query.preview === "shiny") {
-      select = "name gameSort pokedexNo endDate sprite trainer";
+      select = "name gameSort gen pokedexNo endDate sprite trainer";
     }
+    if (req.query.gen === "Gen 1") {
+      query.pokedexNo = { $lte: 151}
+    } else if (req.query.gen === "Gen 2") {
+      query.pokedexNo = { $gt: 151, $lte: 251 }
+    } else if (req.query.gen === "Gen 3") {
+      query.pokedexNo = { $gt: 251, $lte: 386 }
+    } else if (req.query.gen === "Gen 4") {
+      query.pokedexNo = { $gt: 386, $lte: 493 }
+    } else if (req.query.gen === "Gen 5") {
+      query.pokedexNo = { $gt: 493, $lte: 649 }
+    } else if (req.query.gen === "Gen 6") {
+      query.pokedexNo = { $gt: 649, $lte: 721 }
+    } else if (req.query.gen === "Gen 7") {
+      query.pokedexNo = { $gt: 721, $lte: 809 }
+    } else if (req.query.gen === "Gen 8") {
+      query.pokedexNo = { $gt: 809, $lte: 905 }
+    } else if (req.query.gen === "Gen 9") {
+      query.pokedexNo = { $gt: 905 }
+    }
+    
 
     /* SORTS */
     if (req.query.sort === "gameAsc") {
@@ -89,6 +109,21 @@ const shinyGET = async (req, res) => {
       }
 
       res.json(shinies);
+
+      /* RETURNS THE SHINY LIST */
+    } else if (req.query.shinyList) {
+      const shinies = await Shiny.find(query, "name evolutions forms")
+      const shinyList = new Set();
+
+      shinies.forEach(shiny => {
+        shinyList.add(shiny.name);
+
+        shiny.evolutions.forEach(evolution => {
+          shinyList.add(evolution.name);
+        });
+      });
+
+      res.json(Array.from(shinyList));
 
       /* RETURNS A LIST FOR THE ENC. GRAPH */
     } else if (req.query.encountersList) {

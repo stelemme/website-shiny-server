@@ -17,10 +17,18 @@ const gameGET = async (req, res) => {
       select = "name gen sprite dir";
     }
 
-    /* GAMES RESPONSE */
-    const game = await Game.find(query, select).sort(sort);
+    /* GEN LIST */
+    if (req.query.genList) {
+      const games = await Game.find(query, "gen").sort({gen: 1});
+      const genList = [...new Set(games.map(game => game.gen))];
 
-    res.json(game);
+      res.json(genList);
+    } else {
+      /* GAMES RESPONSE */
+      const game = await Game.find(query, select).sort(sort);
+
+      res.json(game);
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

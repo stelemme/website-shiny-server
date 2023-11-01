@@ -11,6 +11,25 @@ const pokedexGET = async (req, res) => {
     if (req.query.name) {
       query.name = req.query.name;
     }
+    if (req.query.gen === "Gen 1") {
+      query.pokedexNo = { $lte: 151}
+    } else if (req.query.gen === "Gen 2") {
+      query.pokedexNo = { $gt: 151, $lte: 251 }
+    } else if (req.query.gen === "Gen 3") {
+      query.pokedexNo = { $gt: 251, $lte: 386 }
+    } else if (req.query.gen === "Gen 4") {
+      query.pokedexNo = { $gt: 386, $lte: 493 }
+    } else if (req.query.gen === "Gen 5") {
+      query.pokedexNo = { $gt: 493, $lte: 649 }
+    } else if (req.query.gen === "Gen 6") {
+      query.pokedexNo = { $gt: 649, $lte: 721 }
+    } else if (req.query.gen === "Gen 7") {
+      query.pokedexNo = { $gt: 721, $lte: 809 }
+    } else if (req.query.gen === "Gen 8") {
+      query.pokedexNo = { $gt: 809, $lte: 905 }
+    } else if (req.query.gen === "Gen 9") {
+      query.pokedexNo = { $gt: 905 }
+    }
 
     /* FILTER IF IN GAME */
     if (req.query.game) {
