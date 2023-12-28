@@ -24,7 +24,7 @@ const shinyGET = async (req, res) => {
       select = "name gameSort gen pokedexNo endDate sprite trainer";
     }
     if (req.query.gen === "Gen 1") {
-      query.pokedexNo = { $lte: 151}
+      query.pokedexNo = { $lte: 151 }
     } else if (req.query.gen === "Gen 2") {
       query.pokedexNo = { $gt: 151, $lte: 251 }
     } else if (req.query.gen === "Gen 3") {
@@ -42,7 +42,7 @@ const shinyGET = async (req, res) => {
     } else if (req.query.gen === "Gen 9") {
       query.pokedexNo = { $gt: 905 }
     }
-    
+
 
     /* SORTS */
     if (req.query.sort === "gameAsc") {
@@ -78,14 +78,14 @@ const shinyGET = async (req, res) => {
 
       res.json(groups);
 
-      /* RETURNS THE USER STATS */
-    } else if (req.query.action === "userStats") {
+      /* RETURNS THE USER RECORDS */
+    } else if (req.query.action === "userRecords") {
       const responses = {};
 
-      responses.first = await Shiny.find(query, "name sprite endDate trainer").sort({ endDate: "asc" }).limit(Number(req.query.amount));
-      responses.mostEncounters = await Shiny.find(query, "name sprite totalEncounters trainer").sort({ totalEncounters: "desc" }).limit(Number(req.query.amount));
-      responses.longestHunt = await Shiny.find(query, "name sprite stats trainer").sort({ 'stats.totalHuntTime': "desc" }).limit(Number(req.query.amount));
-      responses.mostDays = await Shiny.find(query, "name sprite stats trainer").sort({ 'stats.daysHunting': "desc" }).limit(Number(req.query.amount));
+      responses.first = await Shiny.find(query, "name endDate trainer").sort({ endDate: "asc" }).limit(Number(req.query.amount));
+      responses.mostEncounters = await Shiny.find(query, "name totalEncounters trainer").sort({ totalEncounters: "desc" }).limit(Number(req.query.amount));
+      responses.longestHunt = await Shiny.find(query, "name stats trainer").sort({ 'stats.totalHuntTime': "desc" }).limit(Number(req.query.amount));
+      responses.mostDays = await Shiny.find(query, "name stats trainer").sort({ 'stats.daysHunting': "desc" }).limit(Number(req.query.amount));
 
       query.totalEncounters = { $gt: 0 }
       responses.lowestEncounters = await Shiny.find(query, "name sprite totalEncounters trainer").sort({ totalEncounters: "asc" }).limit(Number(req.query.amount));
@@ -93,6 +93,138 @@ const shinyGET = async (req, res) => {
 
       query['stats.totalHuntTime'] = { $gt: 0 }
       responses.shortestHunt = await Shiny.find(query, "name sprite stats trainer").sort({ 'stats.totalHuntTime': "asc" }).limit(Number(req.query.amount));
+
+      res.json(responses);
+
+      /* RETURNS THE USER STATS */
+    } else if (req.query.action === "userStats") {
+
+      const pipeline = [
+        {
+          $facet: {
+            mostFrequentName: [
+              { $group: { _id: '$name', count: { $sum: 1 } } },
+              { $sort: { count: -1 } },
+              { $limit: 1 }
+            ],
+            mostFrequentNature: [
+              { $group: { _id: '$nature', count: { $sum: 1 } } },
+              { $sort: { count: -1 } },
+              { $limit: 1 }
+            ],
+            leastFrequentNature: [
+              { $group: { _id: '$nature', count: { $sum: 1 } } },
+              { $sort: { count: 1 } },
+              { $limit: 1 }
+            ],
+            mostFrequentBall: [
+              { $group: { _id: '$ball', count: { $sum: 1 } } },
+              { $sort: { count: -1 } },
+              { $limit: 1 }
+            ],
+            leastFrequentBall: [
+              { $group: { _id: '$ball', count: { $sum: 1 } } },
+              { $sort: { count: 1 } },
+              { $limit: 1 }
+            ],
+            mostFrequentGen: [
+              { $group: { _id: '$gen', count: { $sum: 1 } } },
+              { $sort: { count: -1 } },
+              { $limit: 1 }
+            ],
+            leastFrequentGen: [
+              { $group: { _id: '$gen', count: { $sum: 1 } } },
+              { $sort: { count: 1 } },
+              { $limit: 1 }
+            ],
+            mostFrequentGame: [
+              { $group: { _id: '$game', count: { $sum: 1 } } },
+              { $sort: { count: -1 } },
+              { $limit: 1 }
+            ],
+            leastFrequentGame: [
+              { $group: { _id: '$game', count: { $sum: 1 } } },
+              { $sort: { count: 1 } },
+              { $limit: 1 }
+            ],
+            mostFrequentLocation: [
+              { $group: { _id: '$location', count: { $sum: 1 } } },
+              { $sort: { count: -1 } },
+              { $limit: 1 }
+            ],
+            mostFrequentIRLLocation: [
+              { $group: { _id: '$IRLLocation', count: { $sum: 1 } } },
+              { $sort: { count: -1 } },
+              { $limit: 1 }
+            ],
+            mostFrequentMethod: [
+              { $group: { _id: '$method.name', count: { $sum: 1 } } },
+              { $sort: { count: -1 } },
+              { $limit: 1 }
+            ],
+            leastFrequentMethod: [
+              { $group: { _id: '$method.name', count: { $sum: 1 } } },
+              { $sort: { count: 1 } },
+              { $limit: 1 }
+            ],
+            mostFrequentYear: [
+              { $group: { _id: { $year: "$endDate" }, count: { $sum: 1 } } },
+              { $sort: { count: -1 } },
+              { $limit: 1 }
+            ],
+            mostFrequentMonth: [
+              { $group: { _id: { year: { $year: "$endDate" }, month: { $month: "$endDate" } }, count: { $sum: 1 } } },
+              { $sort: { count: -1 } },
+              { $limit: 1 }
+            ],
+            mostFrequentDay: [
+              {
+                $group: {
+                  _id: {
+                    date: { $dateToString: { format: "%Y-%m-%d", date: "$endDate" } }
+                  },
+                  count: { $sum: 1 }
+                }
+              },
+              { $sort: { count: -1 } },
+              { $limit: 1 }
+            ],
+          }
+        }
+      ];
+
+      if (req.query.trainer) {
+        pipeline.unshift({
+          $match: { trainer: req.query.trainer }
+        });
+      }
+
+      const result = await Shiny.aggregate(pipeline);
+
+      const responses = {
+        mostFrequentName: result[0].mostFrequentName[0],
+        mostFrequentNature: result[0].mostFrequentNature[0],
+        leastFrequentNature: result[0].leastFrequentNature[0],
+        mostFrequentBall: result[0].mostFrequentBall[0],
+        leastFrequentBall: result[0].leastFrequentBall[0],
+        mostFrequentGen: result[0].mostFrequentGen[0],
+        leastFrequentGen: result[0].leastFrequentGen[0],
+        mostFrequentGame: result[0].mostFrequentGame[0],
+        leastFrequentGame: result[0].leastFrequentGame[0],
+        mostFrequentLocation: result[0].mostFrequentLocation[0],
+        mostFrequentIRLLocation: result[0].mostFrequentIRLLocation[0],
+        mostFrequentMethod: result[0].mostFrequentMethod[0],
+        leastFrequentMethod: result[0].leastFrequentMethod[0],
+        mostFrequentYear: result[0].mostFrequentYear[0],
+        mostFrequentMonth: {
+          _id: new Date(result[0].mostFrequentMonth[0]._id.year, result[0].mostFrequentMonth[0]._id.month - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' }),
+          count: result[0].mostFrequentMonth[0].count
+        },
+        mostFrequentDay: {
+          _id: new Date(result[0].mostFrequentDay[0]._id.date).toLocaleDateString('nl-BE'),
+          count: result[0].mostFrequentDay[0].count
+        },
+      };
 
       res.json(responses);
 
@@ -169,6 +301,54 @@ const shinyGET = async (req, res) => {
       });
 
       res.json(result);
+
+      /* SHINY SEARCH */
+    } else if (req.query.search) {
+      if (req.query.search === "false") {
+        res.json([])
+      } else {
+        const result = await Shiny.aggregate([
+          {
+            $search: {
+              index: "shinies",
+              compound: {
+                should: [
+                  {
+                    autocomplete: {
+                      query: req.query.search,
+                      path: 'name'
+                    }
+                  },
+                  {
+                    autocomplete: {
+                      query: req.query.search,
+                      path: 'evolutions.name'
+                    }
+                  },
+                  {
+                    autocomplete: {
+                      query: req.query.search,
+                      path: 'forms.name'
+                    }
+                  }
+                ],
+                minimumShouldMatch: 1
+              }
+            }
+          },
+          { $limit: 50 },
+          {
+            $project: {
+              "_id": 1,
+              "name": 1,
+              "sprite": 1,
+              "trainer": 1
+            }
+          }
+        ])
+
+        res.json(result);
+      }
     } else {
       /* SHINY RESPONSE */
       const shiny = await Shiny.find(query, select).sort(sort);
@@ -213,6 +393,7 @@ const shinyPOST = async (req, res) => {
 const shinyIdPATCH = async (req, res) => {
   try {
     const shinyId = req.params.id;
+    let shiny
 
     if (req.query.action === "evolutionsEdit") {
       shiny = await Shiny.findOneAndUpdate(
