@@ -1,63 +1,239 @@
 const Counter = require("../models/counter");
 const User = require("../models/user");
+const Shiny = require("../models/shiny");
 
 const counterGET = async (req, res) => {
   try {
     let query = {};
     let select = "";
-    let sort = {}
+    let sort = {};
+    let result = [];
+    let result2 = [];
 
     /* FILTERS */
     if (req.query.trainer) {
       query.trainer = req.query.trainer;
     }
     if (req.query.preview) {
-      select = "name gameSort pokedexNo endDate sprite.game trainer totalEncounters";
+      select =
+        "name gameSort pokedexNo endDate sprite.game trainer totalEncounters";
+    }
+
+    /* ENCOUNTERS ON A DAY */
+    if (req.query.statsDay) {
+      const [day, month, year] = req.query.statsDay.split("-");
+      const inputDate = new Date(`${year}-${month}-${day}`);
+
+      const startOfDay = new Date(inputDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(inputDate);
+      endOfDay.setUTCHours(24, 0, 0, 0);
+
+      select = {
+        name: 1,
+        trainer: 1,
+        encounterCount: {
+          $size: {
+            $filter: {
+              input: "$encounters",
+              as: "encounter",
+              cond: {
+                $and: [
+                  { $gte: ["$$encounter", startOfDay] },
+                  { $lt: ["$$encounter", endOfDay] },
+                ],
+              },
+            },
+          },
+        },
+      };
+
+      query.encounters = {
+        $elemMatch: {
+          $gte: startOfDay,
+          $lt: endOfDay,
+        },
+      };
+    }
+
+    /* ENCOUNTERS DURING A TIME PERIOD */
+    if (req.query.statsPeriod) {
+      const currentDate = new Date();
+
+      const startDate = new Date(currentDate);
+      startDate.setUTCHours(0, 0, 0, 0);
+      startDate.setDate(startDate.getDate() - (req.query.statsPeriod - 1));
+
+      const endDate = new Date(currentDate);
+      endDate.setUTCHours(24, 0, 0, 0);
+
+      select = {
+        name: 1,
+        trainer: 1,
+        encounterCount: {
+          $size: {
+            $filter: {
+              input: "$encounters",
+              as: "encounter",
+              cond: {
+                $and: [
+                  { $gte: ["$$encounter", startDate] },
+                  { $lt: ["$$encounter", endDate] },
+                ],
+              },
+            },
+          },
+        },
+      };
+
+      query = {
+        encounters: {
+          $elemMatch: {
+            $gte: startDate,
+            $lt: endDate,
+          },
+        },
+      };
+    }
+
+    /* TOTAL ENCOUNTERS DURING A TIME PERIOD */
+    if (req.query.statsPeriodTotal) {
+      const currentDate = new Date();
+
+      const startDate = new Date(currentDate);
+      startDate.setUTCHours(0, 0, 0, 0);
+      startDate.setDate(startDate.getDate() - (req.query.statsPeriodTotal - 1));
+
+      const endDate = new Date(currentDate);
+      endDate.setUTCHours(24, 0, 0, 0);
+
+      const pipeline = [
+        {
+          $match: {
+            encounters: {
+              $elemMatch: {
+                $gte: startDate,
+                $lt: endDate,
+              },
+            },
+          },
+        },
+        {
+          $unwind: "$encounters",
+        },
+        {
+          $match: {
+            encounters: {
+              $gte: startDate,
+              $lt: endDate,
+            },
+          },
+        },
+        {
+          $group: {
+            _id: "$trainer",
+            totalEncounters: { $sum: 1 },
+          },
+        },
+        {
+          $sort: {
+            totalEncounters: -1,
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            trainer: "$_id",
+            totalEncounters: 1,
+          },
+        },
+      ];
+
+      function getTotalEncounters(trainerName, shinyData) {
+        const trainer = shinyData?.find(
+          (trainer) => trainer.trainer === trainerName
+        );
+        if (trainer) {
+          return trainer.totalEncounters;
+        } else {
+          return 0;
+        }
+      }
+
+      result = await Counter.aggregate(pipeline).exec();
+      result2 = await Shiny.aggregate(pipeline).exec();
+
+      const trainersToCheck = ["Joaquin", "Korneel", "Simon", "Stef"];
+
+      trainersToCheck.forEach((trainerToCheck) => {
+        const existingEntry = result.find(
+          (entry) => entry.trainer === trainerToCheck
+        );
+
+        if (existingEntry) {
+          existingEntry.totalEncounters += getTotalEncounters(
+            trainerToCheck,
+            result2
+          );
+        } else {
+          result.push({
+            totalEncounters: getTotalEncounters(trainerToCheck, result2),
+            trainer: trainerToCheck,
+          });
+        }
+      });
+
+      result.sort((a, b) => b.totalEncounters - a.totalEncounters);
     }
 
     /* SORTING */
     if (req.query.sort === "gameAsc") {
-      sort.gameSort = "asc"
-      sort.pokedexNo = "asc"
+      sort.gameSort = "asc";
+      sort.pokedexNo = "asc";
     }
     if (req.query.sort === "gameDesc") {
-      sort.gameSort = "desc"
-      sort.pokedexNo = "asc"
+      sort.gameSort = "desc";
+      sort.pokedexNo = "asc";
     }
     if (req.query.sort === "pokedexNoAsc") {
-      sort.pokedexNo = "asc"
+      sort.pokedexNo = "asc";
     }
     if (req.query.sort === "pokedexNoDesc") {
-      sort.pokedexNo = "asc"
+      sort.pokedexNo = "asc";
     }
     if (req.query.sort === "newest") {
-      sort.endDate = "desc"
+      sort.endDate = "desc";
     }
     if (req.query.sort === "oldest") {
-      sort.endDate = "asc"
+      sort.endDate = "asc";
     }
     if (req.query.sort === "encAsc") {
-      sort.totalEncounters = "desc"
+      sort.totalEncounters = "desc";
     }
     if (req.query.sort === "encDesc") {
-      sort.totalEncounters = "asc"
+      sort.totalEncounters = "asc";
     }
 
     /* LATEST COUNTERS RESPONSE*/
     if (req.query.trainers) {
-      const userList = await User.find({}, 'user')
-      const names = userList.map(user => user.user);
+      const userList = await User.find({}, "user");
+      const names = userList.map((user) => user.user);
 
-      let counters = []
+      let counters = [];
       for (const element of names) {
         query.trainer = element;
-        const userCounters = await Counter.find(query, select).sort(sort).limit(Number(req.query.amount));
-        counters.push(userCounters[0])
+        const userCounters = await Counter.find(query, select)
+          .sort(sort)
+          .limit(Number(req.query.amount));
+        counters.push(userCounters[0]);
       }
 
       res.json(counters);
 
       /* COUNTERS RESPONSE */
+    } else if (result.length > 0) {
+      res.json(result);
     } else {
       const counters = await Counter.find(query, select).sort(sort);
 
@@ -108,9 +284,12 @@ const counterIdPUT = async (req, res) => {
 const counterIdPATCH = async (req, res) => {
   try {
     const counterId = req.params.id;
-    const count = await Counter.findById(counterId, "totalEncounters increment");
+    const count = await Counter.findById(
+      counterId,
+      "totalEncounters increment"
+    );
     let counter;
-    let game
+    let game;
 
     /* INITIALIZE DATES FROM CSV (NOT USED ANYMORE) */
     if (req.query.action === "dateFix") {
@@ -118,10 +297,10 @@ const counterIdPATCH = async (req, res) => {
         { _id: counterId },
         {
           startDate: count.encounters[0],
-          endDate: count.encounters.pop()
+          endDate: count.encounters.pop(),
         },
         { new: true }
-      )
+      );
     }
 
     /* EDIT START & END DATE */
@@ -130,10 +309,10 @@ const counterIdPATCH = async (req, res) => {
         { _id: counterId },
         {
           startDate: req.body.startDate,
-          endDate: req.body.endDate
+          endDate: req.body.endDate,
         },
         { new: true }
-      )
+      );
     }
 
     /* EDIT ENCOUNTERS */
@@ -142,7 +321,19 @@ const counterIdPATCH = async (req, res) => {
         { _id: counterId },
         { totalEncounters: req.body.count },
         { new: true }
-      )
+      );
+    }
+    if (req.query.action === "encounterAdd") {
+      counter = await Counter.findOneAndUpdate(
+        { _id: counterId },
+        {
+          $inc: { totalEncounters: req.body.add },
+          $push: {
+            encounters: { $each: Array(req.body.add).fill(Date.now()) },
+          },
+        },
+        { new: true }
+      );
     }
 
     /* EDIT SEARCHLEVEL */
@@ -151,7 +342,7 @@ const counterIdPATCH = async (req, res) => {
         { _id: counterId },
         { "method.searchLevel": req.body.searchLevel },
         { new: true }
-      )
+      );
     }
 
     /* EDIT ENCOUNTERS WITH CSV */
@@ -160,7 +351,7 @@ const counterIdPATCH = async (req, res) => {
         { _id: counterId },
         { encounters: req.body },
         { new: true }
-      )
+      );
     }
 
     /* INCREMENT THE COUNT */
@@ -170,12 +361,12 @@ const counterIdPATCH = async (req, res) => {
         {
           $push: { encounters: Date.now() },
           $inc: { totalEncounters: count.increment },
-          endDate: Date.now()
+          endDate: Date.now(),
         },
         { new: true }
       );
-    } 
-    
+    }
+
     /* INCREMENT SEARCHLEVEL */
     if (req.query.action === "addSearchLevel") {
       counter = await Counter.findOneAndUpdate(
@@ -186,7 +377,7 @@ const counterIdPATCH = async (req, res) => {
         { new: true }
       );
     }
-    
+
     /* UNDO A COUNT */
     if (req.query.action === "undo" && count.totalEncounters > 0) {
       const encounters = await Counter.findById(counterId, "encounters");
