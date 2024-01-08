@@ -102,11 +102,11 @@ const counterGET = async (req, res) => {
       const currentDate = new Date();
 
       const startDate = new Date(currentDate);
-      startDate.setUTCHours(0, 0, 0, 0);
+      startDate.setUTCHours(-1, 0, 0, 0);
       startDate.setDate(startDate.getDate() - (req.query.statsPeriodTotal - 1));
 
       const endDate = new Date(currentDate);
-      endDate.setUTCHours(24, 0, 0, 0);
+      endDate.setUTCHours(23, 59, 59, 999);
 
       const pipeline = [
         {
