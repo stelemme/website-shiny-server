@@ -214,7 +214,17 @@ shinySchema = new Schema({
     totalHuntTime: {
       type: Number,
     }
-  }
+  },
+  marks: [{
+    name: {
+      type: String,
+      required: true
+    },
+    sprite: {
+      type: String,
+      required: true
+    },
+  }],
 });
 
 module.exports = mongoose.model("Shiny", shinySchema);

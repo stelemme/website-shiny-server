@@ -16,6 +16,9 @@ const gameGET = async (req, res) => {
     if (req.query.action === "select") {
       select = "name gen sprite dir";
     }
+    if (req.query.action === "marks") {
+      select = "marks";
+    }
 
     /* GEN LIST */
     if (req.query.genList) {
@@ -23,6 +26,17 @@ const gameGET = async (req, res) => {
       const genList = [...new Set(games.map(game => game.gen))];
 
       res.json(genList);
+    } else if (req.query.backup) {
+      const result = await Game.aggregate([
+        {
+          $project: {
+            _id: 0,
+            __v: 0
+          },
+        },
+      ]);
+
+      res.json(result);
     } else {
       /* GAMES RESPONSE */
       const game = await Game.find(query, select).sort(sort);

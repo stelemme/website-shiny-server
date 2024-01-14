@@ -32,6 +32,16 @@ gameSchema = new Schema({
       required: true
     },
   }],
+  marks: [{
+    name: {
+      type: String,
+      required: true
+    },
+    sprite: {
+      type: String,
+      required: true
+    },
+  }],
   locations: {
     type: [String],
     required: true

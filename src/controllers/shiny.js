@@ -6,6 +6,7 @@ const shinyGET = async (req, res) => {
     let query = {};
     let select = "-encounters";
     const sort = {};
+    const namesToCheck = ["Joaquin", "Korneel", "Simon", "Stef"];
 
     /* FILTERS */
     if (req.query.all) {
@@ -78,6 +79,130 @@ const shinyGET = async (req, res) => {
 
       res.json(groups);
 
+      /* GETS THE BACKUP DATA */
+    } else if (req.query.backup) {
+      const result = await Shiny.aggregate([
+        {
+          $project: {
+            _id: 0,
+            evolutions: { _id: 0 },
+            forms: { _id: 0 },
+            marks: { _id: 0 },
+            __v: 0,
+          },
+        },
+      ]);
+
+      res.json(result);
+      /* TOTAL AMOUNT OF SHINIES */
+    } else if (req.query.statsShinyAmount) {
+      const pipeline = [
+        {
+          $group: {
+            _id: "$trainer",
+            data: { $sum: 1 },
+          },
+        },
+        {
+          $sort: {
+            data: -1,
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            trainer: "$_id",
+            data: 1,
+          },
+        },
+      ];
+
+      if (req.query.counted) {
+        pipeline.unshift({
+          $match: {
+            totalEncounters: { $gt: 0 },
+          },
+        });
+      }
+      if (req.query.statsGen && req.query.statsGen !== "All") {
+        pipeline.unshift({
+          $match: {
+            gen: req.query.statsGen,
+          },
+        });
+      }
+
+      result = await Shiny.aggregate(pipeline);
+
+      const finalResult = namesToCheck.map((name) => {
+        const existingData = result.find((item) => item.trainer === name);
+        return existingData ? existingData : { trainer: name, data: 0 };
+      });
+
+      finalResult.sort((a, b) => b.data - a.data);
+
+      res.json(finalResult);
+      /* AVERAGE NUMBER OF ENCOUNTERS */
+    } else if (req.query.statsAverageEnc) {
+      const pipeline = [
+        {
+          $match: {
+            totalEncounters: { $gt: 0 },
+          },
+        },
+        {
+          $group: {
+            _id: "$trainer",
+            totalEncounters: {
+              $push: {
+                $multiply: [
+                  "$totalEncounters",
+                  { $divide: [8192, "$stats.probability"] },
+                ],
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            trainer: "$_id",
+            data: { $round: [{ $avg: "$totalEncounters" }, 0] },
+          },
+        },
+        {
+          $sort: {
+            data: 1,
+          },
+        },
+      ];
+
+      if (req.query.statsGen && req.query.statsGen !== "All") {
+        pipeline.unshift({
+          $match: {
+            gen: req.query.statsGen,
+          },
+        });
+      }
+
+      result = await Shiny.aggregate(pipeline);
+
+      const finalResult = namesToCheck.map((name) => {
+        const existingData = result.find((item) => item.trainer === name);
+        return existingData ? existingData : { trainer: name, data: 0 };
+      });
+
+      finalResult.sort((a, b) => {
+        if (a.data === 0) {
+          return 1;
+        }
+        if (b.data === 0) {
+          return -1;
+        }
+        return a.data - b.data;
+      });
+
+      res.json(finalResult);
       /* RETURNS THE USER RECORDS */
     } else if (req.query.dateStats) {
       const year = req.query.dateStats;
@@ -151,7 +276,6 @@ const shinyGET = async (req, res) => {
       const result = await Shiny.aggregate(aggregationPipeline);
       const formattedResult = [];
 
-      const namesToCheck = ["Joaquin", "Korneel", "Simon", "Stef"];
       const months = [
         "January",
         "February",
@@ -568,12 +692,35 @@ const shinyIdPATCH = async (req, res) => {
     const shinyId = req.params.id;
     let shiny;
 
+    if (req.query.action === "csv") {
+      shiny = await Shiny.findOneAndUpdate(
+        { _id: shinyId },
+        { encounters: req.body },
+        { new: true }
+      );
+    }
+
     if (req.query.action === "evolutionsEdit") {
       shiny = await Shiny.findOneAndUpdate(
         { _id: shinyId },
         {
           evolutions: req.body.evolutions,
           forms: req.body.forms,
+        },
+        { new: true }
+      );
+    }
+
+    if (req.query.action === "marksEdit") {
+      shiny = await Shiny.findOneAndUpdate(
+        { _id: shinyId },
+        {
+          $push: {
+            marks: {
+              name: req.body.name,
+              sprite: req.body.sprite,
+            },
+          },
         },
         { new: true }
       );

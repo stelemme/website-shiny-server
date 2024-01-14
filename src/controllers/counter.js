@@ -133,19 +133,19 @@ const counterGET = async (req, res) => {
         {
           $group: {
             _id: "$trainer",
-            totalEncounters: { $sum: 1 },
+            data: { $sum: 1 },
           },
         },
         {
           $sort: {
-            totalEncounters: -1,
+            data: -1,
           },
         },
         {
           $project: {
             _id: 0,
             trainer: "$_id",
-            totalEncounters: 1,
+            data: 1,
           },
         },
       ];
@@ -155,7 +155,7 @@ const counterGET = async (req, res) => {
           (trainer) => trainer.trainer === trainerName
         );
         if (trainer) {
-          return trainer.totalEncounters;
+          return trainer.data;
         } else {
           return 0;
         }
@@ -172,19 +172,83 @@ const counterGET = async (req, res) => {
         );
 
         if (existingEntry) {
-          existingEntry.totalEncounters += getTotalEncounters(
-            trainerToCheck,
-            result2
-          );
+          existingEntry.data += getTotalEncounters(trainerToCheck, result2);
         } else {
           result.push({
-            totalEncounters: getTotalEncounters(trainerToCheck, result2),
+            data: getTotalEncounters(trainerToCheck, result2),
             trainer: trainerToCheck,
           });
         }
       });
 
-      result.sort((a, b) => b.totalEncounters - a.totalEncounters);
+      result.sort((a, b) => b.data - a.data);
+    }
+
+    /* TOTAL AMOUNT OF COUNTERS */
+    if (req.query.backup) {
+      result = await Counter.aggregate([
+        {
+          $project: {
+            _id: 0,
+            __v: 0,
+          },
+        },
+      ]);
+    }
+
+    /* TOTAL AMOUNT OF COUNTERS */
+    if (req.query.statsCountersAmount) {
+      const pipeline = [
+        {
+          $group: {
+            _id: "$trainer",
+            data: { $sum: 1 },
+          },
+        },
+        {
+          $sort: {
+            data: -1,
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            trainer: "$_id",
+            data: 1,
+          },
+        },
+      ];
+
+      result = await Counter.aggregate(pipeline);
+    }
+
+    /* ENCOUNTERS PERCENTAGE */
+    if (req.query.statsCountersPercentage) {
+      const pipeline = [
+        {
+          $group: {
+            _id: "$trainer",
+            encounterData: {
+              $push: {
+                totalEncounters: "$totalEncounters",
+                shinyCharm: "$method.shinyCharm",
+                odds: "$method.odds",
+                rolls: "$method.rolls",
+                charmRolls: "$method.charmRolls",
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            trainer: "$_id",
+            encounterData: 1,
+          },
+        },
+      ];
+
+      result = await Counter.aggregate(pipeline);
     }
 
     /* SORTING */
@@ -359,7 +423,9 @@ const counterIdPATCH = async (req, res) => {
       counter = await Counter.findOneAndUpdate(
         { _id: counterId },
         {
-          $push: { encounters: Date.now() },
+          $push: {
+            encounters: { $each: Array(count.increment).fill(Date.now()) },
+          },
           $inc: { totalEncounters: count.increment },
           endDate: Date.now(),
         },
@@ -385,7 +451,7 @@ const counterIdPATCH = async (req, res) => {
         { _id: counterId },
         {
           endDate: encounters.encounters[encounters.encounters.length - 2],
-          $pop: { encounters: 1 },
+          encounters: encounters.encounters.slice(0, -count.increment),
           $inc: { totalEncounters: -count.increment },
         },
         { new: true }

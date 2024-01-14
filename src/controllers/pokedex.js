@@ -60,6 +60,19 @@ const pokedexGET = async (req, res) => {
 
       res.json({ formsList: names });
 
+      /* BACKUPS THE DATA */
+    } else if (req.query.backup) {
+      const result = await Pokedex.aggregate([
+        {
+          $project: {
+            _id: 0,
+            __v: 0
+          },
+        },
+      ]);
+
+      res.json(result);
+
       /* RETURNS A LIST OF FORMS & EVOLUTIONS OF A CERTAIN POKEMON */
     } else if (req.query.evolutions) {
       const pokemon = await Pokedex.find(query, 'name pokedexNo evolutions types forms sprite')
