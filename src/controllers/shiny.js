@@ -344,6 +344,194 @@ const shinyGET = async (req, res) => {
 
       res.json(responses);
 
+      /* RETURNS THE GAME STATS */
+    } else if (req.query.action === "gameStats") {
+      const pipeline = [
+        {
+          $group: {
+            _id: "$trainer",
+            shinyAmount: { $sum: 1 },
+            countedShinyAmount: {
+              $sum: {
+                $cond: [{ $gt: ["$totalEncounters", 0] }, 1, 0],
+              },
+            },
+            overOdds: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $gt: ["$totalEncounters", 0] },
+                      { $gt: ["$totalEncounters", "$stats.probability"] },
+                    ],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+            underOdds: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $gt: ["$totalEncounters", 0] },
+                      { $lt: ["$totalEncounters", "$stats.probability"] },
+                    ],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+            totalEncountersAvg: {
+              $avg: {
+                $cond: [
+                  { $gt: ["$totalEncounters", 0] },
+                  {
+                    $multiply: [
+                      "$totalEncounters",
+                      { $divide: [8192, "$stats.probability"] },
+                    ],
+                  },
+                  null,
+                ],
+              },
+            },
+            totalEncountersSum: { $sum: "$totalEncounters" },
+            totalTimeSum: { $sum: "$stats.totalHuntTime" },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            trainer: "$_id",
+            shinyAmount: 1,
+            countedShinyAmount: 1,
+            overOdds: 1,
+            underOdds: 1,
+            totalEncountersAvg: { $round: ["$totalEncountersAvg", 0] },
+            totalEncountersSum: 1,
+            totalTimeSum: 1,
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            trainers: {
+              $push: {
+                k: "$trainer",
+                v: {
+                  shinyAmount: "$shinyAmount",
+                  countedShinyAmount: "$countedShinyAmount",
+                  overOdds: "$overOdds",
+                  underOdds: "$underOdds",
+                  totalEncountersAvg: "$totalEncountersAvg",
+                  totalEncountersSum: "$totalEncountersSum",
+                  totalTimeSum: "$totalTimeSum",
+                },
+              },
+            },
+          },
+        },
+        {
+          $replaceRoot: {
+            newRoot: { $arrayToObject: "$trainers" },
+          },
+        },
+      ];
+
+      if (req.query.gameFilter && req.query.gameFilter !== "undefined") {
+        pipeline.unshift({
+          $match: { game: req.query.gameFilter },
+        });
+      }
+
+      const result = await Shiny.aggregate(pipeline);
+
+      res.json(result[0]);
+
+      /* RETURNS THE TOTAL GAME STATS */
+    } else if (req.query.action === "gameStatsTotal") {
+      const pipeline = [
+        {
+          $group: {
+            _id: null,
+            shinyAmount: { $sum: 1 },
+            countedShinyAmount: {
+              $sum: {
+                $cond: [{ $gt: ["$totalEncounters", 0] }, 1, 0],
+              },
+            },
+            overOdds: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $gt: ["$totalEncounters", 0] },
+                      { $gt: ["$totalEncounters", "$stats.probability"] },
+                    ],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+            underOdds: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $gt: ["$totalEncounters", 0] },
+                      { $lt: ["$totalEncounters", "$stats.probability"] },
+                    ],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+            totalEncountersAvg: {
+              $avg: {
+                $cond: [
+                  { $gt: ["$totalEncounters", 0] },
+                  {
+                    $multiply: [
+                      "$totalEncounters",
+                      { $divide: [8192, "$stats.probability"] },
+                    ],
+                  },
+                  null,
+                ],
+              },
+            },
+            totalEncountersSum: { $sum: "$totalEncounters" },
+            totalTimeSum: { $sum: "$stats.totalHuntTime" },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            shinyAmount: 1,
+            countedShinyAmount: 1,
+            overOdds: 1,
+            underOdds: 1,
+            totalEncountersAvg: { $round: ["$totalEncountersAvg", 0] },
+            totalEncountersSum: 1,
+            totalTimeSum: 1,
+          },
+        },
+      ];
+
+      if (req.query.gameFilter && req.query.gameFilter !== "undefined") {
+        pipeline.unshift({
+          $match: { game: req.query.gameFilter },
+        });
+      }
+
+      const result = await Shiny.aggregate(pipeline);
+
+      res.json(result[0]);
       /* RETURNS THE USER STATS */
     } else if (req.query.action === "userStats") {
       const pipeline = [
