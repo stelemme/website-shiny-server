@@ -3,110 +3,239 @@ const User = require("../models/user");
 
 const shinyGET = async (req, res) => {
   try {
+    let pipeline = [];
+
+    pipeline.push({
+      $project: {
+        encounters: 0,
+      },
+    });
+
     let query = {};
-    let select = "-encounters";
     const sort = {};
+    sort.pokedexNo = "asc";
+
     const namesToCheck = ["Joaquin", "Korneel", "Simon", "Stef"];
+    const months = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
 
     /* FILTERS */
     if (req.query.all) {
-      select = "";
+      let indexToRemove = pipeline.findIndex(
+        (item) => item["$project"] && item["$project"]["encounters"] === 0
+      );
+
+      if (indexToRemove !== -1) {
+        pipeline.splice(indexToRemove, 1);
+      }
     }
     if (req.query.trainer) {
-      query.trainer = req.query.trainer;
+      pipeline.push({
+        $match: {
+          trainer: req.query.trainer,
+        },
+      });
     }
     if (req.query.action === "counters") {
-      query.totalEncounters = { $gt: 0 };
-    }
-    if (req.query.preview === "counter") {
-      select =
-        "name gameSort pokedexNo endDate sprite.game trainer totalEncounters";
-    }
-    if (req.query.preview === "shiny") {
-      select = "name gameSort gen pokedexNo endDate sprite trainer";
+      pipeline.push({
+        $match: {
+          totalEncounters: { $gt: 0 },
+        },
+      });
     }
     if (req.query.gen === "Gen 1") {
-      query.pokedexNo = { $lte: 151 };
+      pipeline.push({
+        $match: {
+          pokedexNo: { $lte: 151 },
+        },
+      });
     } else if (req.query.gen === "Gen 2") {
-      query.pokedexNo = { $gt: 151, $lte: 251 };
+      pipeline.push({
+        $match: {
+          pokedexNo: { $gt: 151, $lte: 251 },
+        },
+      });
     } else if (req.query.gen === "Gen 3") {
-      query.pokedexNo = { $gt: 251, $lte: 386 };
+      pipeline.push({
+        $match: {
+          pokedexNo: { $gt: 251, $lte: 386 },
+        },
+      });
     } else if (req.query.gen === "Gen 4") {
-      query.pokedexNo = { $gt: 386, $lte: 493 };
+      pipeline.push({
+        $match: {
+          pokedexNo: { $gt: 386, $lte: 493 },
+        },
+      });
     } else if (req.query.gen === "Gen 5") {
-      query.pokedexNo = { $gt: 493, $lte: 649 };
+      pipeline.push({
+        $match: {
+          pokedexNo: { $gt: 493, $lte: 649 },
+        },
+      });
     } else if (req.query.gen === "Gen 6") {
-      query.pokedexNo = { $gt: 649, $lte: 721 };
+      pipeline.push({
+        $match: {
+          pokedexNo: { $gt: 649, $lte: 721 },
+        },
+      });
     } else if (req.query.gen === "Gen 7") {
-      query.pokedexNo = { $gt: 721, $lte: 809 };
+      pipeline.push({
+        $match: {
+          pokedexNo: { $gt: 721, $lte: 809 },
+        },
+      });
     } else if (req.query.gen === "Gen 8") {
-      query.pokedexNo = { $gt: 809, $lte: 905 };
+      pipeline.push({
+        $match: {
+          pokedexNo: { $gt: 809, $lte: 905 },
+        },
+      });
     } else if (req.query.gen === "Gen 9") {
-      query.pokedexNo = { $gt: 905 };
+      pipeline.push({ $match: { pokedexNo: { $gt: 905 } } });
+    }
+    if (req.query.groupShinies) {
+      pipeline = pipeline.concat([
+        {
+          $group: {
+            _id: "$group",
+            count: { $sum: 1 },
+            documents: { $push: "$$ROOT" },
+          },
+        },
+        {
+          $addFields: {
+            documents: {
+              $cond: {
+                if: { $eq: ["$_id", null] },
+                then: "$documents",
+                else: { $slice: ["$documents", 1] },
+              },
+            },
+          },
+        },
+        {
+          $unwind: "$documents",
+        },
+        {
+          $replaceRoot: { newRoot: "$documents" },
+        },
+        /* {
+          $addFields: {
+            nature: {
+              $cond: {
+                if: { $ifNull: ["$group", false] },
+                then: "-",
+                else: "$nature",
+              },
+            },
+            gender: {
+              $cond: {
+                if: { $ifNull: ["$group", false] },
+                then: "-",
+                else: "$gender",
+              },
+            },
+            ball: {
+              $cond: {
+                if: { $ifNull: ["$group", false] },
+                then: "-",
+                else: "$ball",
+              },
+            },
+            nickname: {
+              $cond: {
+                if: { $ifNull: ["$group", false] },
+                then: "-",
+                else: "$nickname",
+              },
+            },
+            IRLLocation: {
+              $cond: {
+                if: { $ifNull: ["$group", false] },
+                then: "-",
+                else: "$IRLLocation",
+              },
+            },
+          },
+        }, */
+      ]);
+    }
+    if (req.query.preview === "counter") {
+      pipeline.push({
+        $project: {
+          _id: 1,
+          name: 1,
+          gameSort: 1,
+          pokedexNo: 1,
+          endDate: 1,
+          "sprite.game": 1,
+          trainer: 1,
+          totalEncounters: 1,
+        },
+      });
+    }
+    if (req.query.preview === "shiny") {
+      pipeline.push({
+        $project: {
+          _id: 1,
+          name: 1,
+          gameSort: 1,
+          gen: 1,
+          pokedexNo: 1,
+          endDate: 1,
+          sprite: 1,
+          trainer: 1,
+        },
+      });
     }
 
     /* SORTS */
     if (req.query.sort === "gameAsc") {
-      sort.gameSort = "asc";
-      sort.pokedexNo = "asc";
+      pipeline.push({ $sort: { gameSort: 1, pokedexNo: 1 } });
     }
     if (req.query.sort === "gameDesc") {
-      sort.gameSort = "desc";
-      sort.pokedexNo = "asc";
+      pipeline.push({ $sort: { gameSort: -1, pokedexNo: 1 } });
     }
     if (req.query.sort === "pokedexNoAsc") {
-      sort.pokedexNo = "asc";
+      pipeline.push({ $sort: { pokedexNo: 1 } });
     }
     if (req.query.sort === "pokedexNoDesc") {
-      sort.pokedexNo = "asc";
+      pipeline.push({ $sort: { pokedexNo: -1 } });
     }
     if (req.query.sort === "newest") {
-      sort.endDate = "desc";
+      pipeline.push({ $sort: { endDate: -1 } });
     }
     if (req.query.sort === "oldest") {
-      sort.endDate = "asc";
+      pipeline.push({ $sort: { endDate: 1 } });
     }
     if (req.query.sort === "encAsc") {
-      sort.totalEncounters = "desc";
+      pipeline.push({ $sort: { totalEncounters: -1 } });
     }
     if (req.query.sort === "encDesc") {
-      sort.totalEncounters = "asc";
+      pipeline.push({ $sort: { totalEncounters: 1 } });
     }
 
-    /* RETURNS GROUPS FOR RADAR */
-    if (req.query.group) {
-      const groups = await Shiny.distinct("group");
-
-      res.json(groups);
-
-      /* GETS THE BACKUP DATA */
-    } else if (req.query.backup) {
-      const result = await Shiny.aggregate([
+    /* TOTAL AMOUNT OF SHINIES */
+    if (req.query.statsShinyAmount) {
+      pipeline = pipeline.concat([
         {
-          $project: {
-            _id: 0,
-            evolutions: { _id: 0 },
-            forms: { _id: 0 },
-            marks: { _id: 0 },
-            __v: 0,
-          },
-        },
-      ]);
-
-      res.json(result);
-      /* TOTAL AMOUNT OF SHINIES */
-    } else if (req.query.statsShinyAmount) {
-      const pipeline = [
-        {
-          $group: {
-            _id: "$trainer",
-            data: { $sum: 1 },
-          },
+          $group: { _id: "$trainer", data: { $sum: 1 } },
         },
         {
-          $sort: {
-            data: -1,
-          },
+          $sort: { data: -1 },
         },
         {
           $project: {
@@ -115,36 +244,47 @@ const shinyGET = async (req, res) => {
             data: 1,
           },
         },
-      ];
-
-      if (req.query.counted) {
-        pipeline.unshift({
-          $match: {
-            totalEncounters: { $gt: 0 },
+        {
+          $group: {
+            _id: null,
+            result: { $push: "$$ROOT" },
+            allTrainers: { $push: "$trainer" },
           },
-        });
-      }
-      if (req.query.statsGen && req.query.statsGen !== "All") {
-        pipeline.unshift({
-          $match: {
-            gen: req.query.statsGen,
+        },
+        {
+          $project: {
+            _id: 0,
+            result: {
+              $concatArrays: [
+                "$result",
+                {
+                  $map: {
+                    input: {
+                      $setDifference: [namesToCheck, "$allTrainers"],
+                    },
+                    as: "missingTrainer",
+                    in: {
+                      trainer: "$$missingTrainer",
+                      data: 0,
+                    },
+                  },
+                },
+              ],
+            },
           },
-        });
-      }
+        },
+        {
+          $unwind: "$result",
+        },
+        {
+          $replaceRoot: { newRoot: "$result" },
+        },
+      ]);
+    }
 
-      result = await Shiny.aggregate(pipeline);
-
-      const finalResult = namesToCheck.map((name) => {
-        const existingData = result.find((item) => item.trainer === name);
-        return existingData ? existingData : { trainer: name, data: 0 };
-      });
-
-      finalResult.sort((a, b) => b.data - a.data);
-
-      res.json(finalResult);
-      /* AVERAGE NUMBER OF ENCOUNTERS */
-    } else if (req.query.statsAverageEnc) {
-      const pipeline = [
+    /* AVERAGE NUMBER OF ENCOUNTERS */
+    if (req.query.statsAverageEnc) {
+      pipeline = pipeline.concat([
         {
           $match: {
             totalEncounters: { $gt: 0 },
@@ -175,39 +315,49 @@ const shinyGET = async (req, res) => {
             data: 1,
           },
         },
-      ];
-
-      if (req.query.statsGen && req.query.statsGen !== "All") {
-        pipeline.unshift({
-          $match: {
-            gen: req.query.statsGen,
+        {
+          $group: {
+            _id: null,
+            result: { $push: "$$ROOT" },
+            allTrainers: { $push: "$trainer" },
           },
-        });
-      }
+        },
+        {
+          $project: {
+            _id: 0,
+            result: {
+              $concatArrays: [
+                "$result",
+                {
+                  $map: {
+                    input: {
+                      $setDifference: [namesToCheck, "$allTrainers"],
+                    },
+                    as: "missingTrainer",
+                    in: {
+                      data: 0,
+                      trainer: "$$missingTrainer",
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        {
+          $unwind: "$result",
+        },
+        {
+          $replaceRoot: { newRoot: "$result" },
+        },
+      ]);
+    }
 
-      result = await Shiny.aggregate(pipeline);
-
-      const finalResult = namesToCheck.map((name) => {
-        const existingData = result.find((item) => item.trainer === name);
-        return existingData ? existingData : { trainer: name, data: 0 };
-      });
-
-      finalResult.sort((a, b) => {
-        if (a.data === 0) {
-          return 1;
-        }
-        if (b.data === 0) {
-          return -1;
-        }
-        return a.data - b.data;
-      });
-
-      res.json(finalResult);
-      /* RETURNS THE USER RECORDS */
-    } else if (req.query.dateStats) {
+    /* RETURNS THE DATESTATS */
+    if (req.query.dateStats) {
       const year = req.query.dateStats;
 
-      const aggregationPipeline = [
+      pipeline = pipeline.concat([
         {
           $match: {
             endDate: {
@@ -271,82 +421,79 @@ const shinyGET = async (req, res) => {
         {
           $sort: { month: 1 },
         },
-      ];
+        {
+          $group: {
+            _id: null,
+            result: { $push: "$$ROOT" },
+            allMonths: { $push: "$month" },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            result: {
+              $concatArrays: [
+                "$result",
+                {
+                  $map: {
+                    input: {
+                      $setDifference: [months, "$allMonths"],
+                    },
+                    as: "missingMonth",
+                    in: {
+                      month: "$$missingMonth",
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        {
+          $unwind: "$result",
+        },
+        {
+          $replaceRoot: { newRoot: "$result" },
+        },
+        {
+          $addFields: {
+            monthOrder: {
+              $switch: {
+                branches: [
+                  { case: { $eq: ["$month", "January"] }, then: 1 },
+                  { case: { $eq: ["$month", "February"] }, then: 2 },
+                  { case: { $eq: ["$month", "March"] }, then: 3 },
+                  { case: { $eq: ["$month", "April"] }, then: 4 },
+                  { case: { $eq: ["$month", "May"] }, then: 5 },
+                  { case: { $eq: ["$month", "June"] }, then: 6 },
+                  { case: { $eq: ["$month", "July"] }, then: 7 },
+                  { case: { $eq: ["$month", "August"] }, then: 8 },
+                  { case: { $eq: ["$month", "September"] }, then: 9 },
+                  { case: { $eq: ["$month", "October"] }, then: 10 },
+                  { case: { $eq: ["$month", "November"] }, then: 11 },
+                  { case: { $eq: ["$month", "December"] }, then: 12 },
+                ],
+                default: 0,
+              },
+            },
+          },
+        },
+        {
+          $sort: {
+            monthOrder: 1,
+          },
+        },
+        {
+          $project: {
+            monthOrder: 0,
+          },
+        },
+      ]);
+    }
 
-      const result = await Shiny.aggregate(aggregationPipeline);
-      const formattedResult = [];
-
-      const months = [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
-      ];
-
-      months.forEach((month) => {
-        const monthObj = {
-          month: month,
-        };
-
-        const counts = result.find((entry) => entry.month === month) || {};
-
-        namesToCheck.forEach((month) => {
-          monthObj[month] = counts[month] || 0;
-        });
-
-        formattedResult.push(monthObj);
-      });
-
-      res.json(formattedResult);
-    } else if (req.query.action === "userRecords") {
-      const responses = {};
-
-      responses.first = await Shiny.find(query, "name endDate trainer")
-        .sort({ endDate: "asc" })
-        .limit(Number(req.query.amount));
-      responses.mostEncounters = await Shiny.find(
-        query,
-        "name totalEncounters trainer"
-      )
-        .sort({ totalEncounters: "desc" })
-        .limit(Number(req.query.amount));
-      responses.longestHunt = await Shiny.find(query, "name stats trainer")
-        .sort({ "stats.totalHuntTime": "desc" })
-        .limit(Number(req.query.amount));
-      responses.mostDays = await Shiny.find(query, "name stats trainer")
-        .sort({ "stats.daysHunting": "desc" })
-        .limit(Number(req.query.amount));
-
-      query.totalEncounters = { $gt: 0 };
-      responses.lowestEncounters = await Shiny.find(
-        query,
-        "name sprite totalEncounters trainer"
-      )
-        .sort({ totalEncounters: "asc" })
-        .limit(Number(req.query.amount));
-      delete query.totalEncounters;
-
-      query["stats.totalHuntTime"] = { $gt: 0 };
-      responses.shortestHunt = await Shiny.find(
-        query,
-        "name sprite stats trainer"
-      )
-        .sort({ "stats.totalHuntTime": "asc" })
-        .limit(Number(req.query.amount));
-
-      res.json(responses);
-
-      /* RETURNS THE GAME STATS */
-    } else if (req.query.action === "gameStats") {
-      const pipeline = [
+    /* RETURNS THE GAME STATS */
+    if (req.query.action === "gameStats") {
+      pipeline = pipeline.concat([
         {
           $group: {
             _id: "$trainer",
@@ -439,21 +586,12 @@ const shinyGET = async (req, res) => {
             newRoot: { $arrayToObject: "$trainers" },
           },
         },
-      ];
+      ]);
+    }
 
-      if (req.query.gameFilter && req.query.gameFilter !== "undefined") {
-        pipeline.unshift({
-          $match: { game: req.query.gameFilter },
-        });
-      }
-
-      const result = await Shiny.aggregate(pipeline);
-
-      res.json(result[0]);
-
-      /* RETURNS THE TOTAL GAME STATS */
-    } else if (req.query.action === "gameStatsTotal") {
-      const pipeline = [
+    /* RETURNS THE TOTAL GAME STATS */
+    if (req.query.action === "gameStatsTotal") {
+      pipeline = pipeline.concat([
         {
           $group: {
             _id: null,
@@ -521,20 +659,44 @@ const shinyGET = async (req, res) => {
             totalTimeSum: 1,
           },
         },
-      ];
+      ]);
+    }
 
-      if (req.query.gameFilter && req.query.gameFilter !== "undefined") {
-        pipeline.unshift({
-          $match: { game: req.query.gameFilter },
-        });
-      }
+    /* RETURNS LATEST SHINIES*/
+    if (req.query.action === "latest") {
+      pipeline = pipeline.concat([
+        {
+          $sort: {
+            trainer: 1,
+            endDate: -1,
+          },
+        },
+        {
+          $group: {
+            _id: "$trainer",
+            latestDocument: { $first: "$$ROOT" },
+          },
+        },
+        {
+          $replaceRoot: {
+            newRoot: "$latestDocument",
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            sprite: 1,
+            trainer: 1,
+            name: 1,
+          },
+        },
+        { $sort: { trainer: 1 } },
+      ]);
+    }
 
-      const result = await Shiny.aggregate(pipeline);
-
-      res.json(result[0]);
-      /* RETURNS THE USER STATS */
-    } else if (req.query.action === "userStats") {
-      const pipeline = [
+    /* RETURNS THE USER STATS */
+    if (req.query.action === "userStats") {
+      pipeline = pipeline.concat([
         {
           $facet: {
             mostFrequentName: [
@@ -636,67 +798,156 @@ const shinyGET = async (req, res) => {
             ],
           },
         },
-      ];
-
-      if (req.query.trainer) {
-        pipeline.unshift({
-          $match: { trainer: req.query.trainer },
-        });
-      }
-
-      const result = await Shiny.aggregate(pipeline);
-
-      const responses = {
-        mostFrequentName: result[0].mostFrequentName[0],
-        mostFrequentNature: result[0].mostFrequentNature[0],
-        leastFrequentNature: result[0].leastFrequentNature[0],
-        mostFrequentBall: result[0].mostFrequentBall[0],
-        leastFrequentBall: result[0].leastFrequentBall[0],
-        mostFrequentGen: result[0].mostFrequentGen[0],
-        leastFrequentGen: result[0].leastFrequentGen[0],
-        mostFrequentGame: result[0].mostFrequentGame[0],
-        leastFrequentGame: result[0].leastFrequentGame[0],
-        mostFrequentLocation: result[0].mostFrequentLocation[0],
-        mostFrequentIRLLocation: result[0].mostFrequentIRLLocation[0],
-        mostFrequentMethod: result[0].mostFrequentMethod[0],
-        leastFrequentMethod: result[0].leastFrequentMethod[0],
-        mostFrequentYear: result[0].mostFrequentYear[0],
-        mostFrequentMonth: {
-          _id: new Date(
-            result[0].mostFrequentMonth[0]._id.year,
-            result[0].mostFrequentMonth[0]._id.month - 1,
-            1
-          ).toLocaleString("en-US", { month: "long", year: "numeric" }),
-          count: result[0].mostFrequentMonth[0].count,
+        {
+          $project: {
+            mostFrequentName: { $arrayElemAt: ["$mostFrequentName", 0] },
+            mostFrequentNature: { $arrayElemAt: ["$mostFrequentNature", 0] },
+            leastFrequentNature: { $arrayElemAt: ["$leastFrequentNature", 0] },
+            mostFrequentBall: { $arrayElemAt: ["$mostFrequentBall", 0] },
+            leastFrequentBall: { $arrayElemAt: ["$leastFrequentBall", 0] },
+            mostFrequentGen: { $arrayElemAt: ["$mostFrequentGen", 0] },
+            leastFrequentGen: { $arrayElemAt: ["$leastFrequentGen", 0] },
+            mostFrequentGame: { $arrayElemAt: ["$mostFrequentGame", 0] },
+            leastFrequentGame: { $arrayElemAt: ["$leastFrequentGame", 0] },
+            mostFrequentLocation: {
+              $arrayElemAt: ["$mostFrequentLocation", 0],
+            },
+            mostFrequentIRLLocation: {
+              $arrayElemAt: ["$mostFrequentIRLLocation", 0],
+            },
+            mostFrequentMethod: { $arrayElemAt: ["$mostFrequentMethod", 0] },
+            leastFrequentMethod: { $arrayElemAt: ["$leastFrequentMethod", 0] },
+            mostFrequentYear: { $arrayElemAt: ["$mostFrequentYear", 0] },
+            mostFrequentMonth: {
+              $let: {
+                vars: {
+                  mostFrequentMonth: {
+                    $arrayElemAt: ["$mostFrequentMonth", 0],
+                  },
+                },
+                in: {
+                  _id: {
+                    $dateToString: {
+                      format: "%Y-%m",
+                      date: {
+                        $dateFromParts: {
+                          year: "$$mostFrequentMonth._id.year",
+                          month: "$$mostFrequentMonth._id.month",
+                          day: 1,
+                        },
+                      },
+                    },
+                  },
+                  count: "$$mostFrequentMonth.count",
+                },
+              },
+            },
+            mostFrequentDay: {
+              $let: {
+                vars: {
+                  mostFrequentDay: {
+                    $arrayElemAt: ["$mostFrequentDay", 0],
+                  },
+                },
+                in: {
+                  _id: "$$mostFrequentDay._id.date",
+                  count: "$$mostFrequentDay.count",
+                },
+              },
+            },
+          },
         },
-        mostFrequentDay: {
-          _id: new Date(
-            result[0].mostFrequentDay[0]._id.date
-          ).toLocaleDateString("nl-BE"),
-          count: result[0].mostFrequentDay[0].count,
+      ]);
+    }
+
+    /* RETURNS THE USER RECORDS */
+    if (req.query.action === "userRecords") {
+      pipeline = pipeline.concat([
+        {
+          $facet: {
+            first: [{ $sort: { endDate: 1 } }, { $limit: 1 }],
+            mostEncounters: [{ $sort: { totalEncounters: -1 } }, { $limit: 1 }],
+            longestHunt: [
+              { $sort: { "stats.totalHuntTime": -1 } },
+              { $limit: 1 },
+            ],
+            mostDays: [{ $sort: { "stats.daysHunting": -1 } }, { $limit: 1 }],
+            lowestEncounters: [
+              {
+                $match: {
+                  totalEncounters: { $gt: 0 },
+                },
+              },
+              { $sort: { totalEncounters: 1 } },
+              { $limit: 1 },
+            ],
+            shortestHunt: [
+              {
+                $match: {
+                  "stats.totalHuntTime": { $gt: 0 },
+                },
+              },
+              { $sort: { "stats.totalHuntTime": 1 } },
+              { $limit: 1 },
+            ],
+          },
         },
-      };
+        {
+          $project: {
+            first: { $arrayElemAt: ["$first", 0] },
+            mostEncounters: { $arrayElemAt: ["$mostEncounters", 0] },
+            longestHunt: { $arrayElemAt: ["$longestHunt", 0] },
+            mostDays: { $arrayElemAt: ["$mostDays", 0] },
+            lowestEncounters: { $arrayElemAt: ["$lowestEncounters", 0] },
+            shortestHunt: { $arrayElemAt: ["$shortestHunt", 0] },
+          },
+        },
+      ]);
+    }
 
-      res.json(responses);
+    if (req.query.counted) {
+      pipeline.unshift({
+        $match: {
+          totalEncounters: { $gt: 0 },
+        },
+      });
+    }
 
-      /* RETURNS LATEST SHINIES*/
-    } else if (req.query.trainers) {
-      const userList = await User.find({}, "user");
-      const names = userList.map((user) => user.user);
+    if (req.query.statsGen && req.query.statsGen !== "All") {
+      pipeline.unshift({
+        $match: {
+          gen: req.query.statsGen,
+        },
+      });
+    }
 
-      let shinies = [];
-      for (const element of names) {
-        query.trainer = element;
-        const userShinies = await Shiny.find(
-          query,
-          "name sprite endDate trainer"
-        )
-          .sort(sort)
-          .limit(Number(req.query.amount));
-        shinies.push(userShinies[0]);
-      }
+    if (req.query.gameFilter && req.query.gameFilter !== "undefined") {
+      pipeline.unshift({
+        $match: { game: req.query.gameFilter },
+      });
+    }
 
-      res.json(shinies);
+    /* RETURNS GROUPS FOR RADAR */
+    if (req.query.group) {
+      const groups = await Shiny.distinct("group");
+
+      res.json(groups);
+
+      /* GETS THE BACKUP DATA */
+    } else if (req.query.backup) {
+      const result = await Shiny.aggregate([
+        {
+          $project: {
+            _id: 0,
+            evolutions: { _id: 0 },
+            forms: { _id: 0 },
+            marks: { _id: 0 },
+            __v: 0,
+          },
+        },
+      ]);
+
+      res.json(result);
 
       /* RETURNS THE SHINY LIST */
     } else if (req.query.shinyList) {
@@ -836,7 +1087,12 @@ const shinyGET = async (req, res) => {
       }
     } else {
       /* SHINY RESPONSE */
-      const shiny = await Shiny.find(query, select).sort(sort);
+      let shiny = "";
+      if (pipeline.length > 0) {
+        shiny = await Shiny.aggregate(pipeline);
+      } else {
+        shiny = await Shiny.find();
+      }
 
       res.json(shiny);
     }
