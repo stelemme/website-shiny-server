@@ -932,12 +932,40 @@ const shinyGET = async (req, res) => {
           $group: {
             _id: null,
             names: { $addToSet: "$name" },
+            evolutionNames: {
+              $addToSet: {
+                $map: { input: "$evolutions", as: "evo", in: "$$evo.name" },
+              },
+            },
+            formNames: {
+              $addToSet: {
+                $map: { input: "$forms", as: "form", in: "$$form.name" },
+              },
+            },
           },
         },
         {
           $project: {
             _id: 0,
-            names: 1,
+            names: {
+              $setUnion: [
+                "$names",
+                {
+                  $reduce: {
+                    input: "$evolutionNames",
+                    initialValue: [],
+                    in: { $concatArrays: ["$$value", "$$this"] },
+                  },
+                },
+                {
+                  $reduce: {
+                    input: "$formNames",
+                    initialValue: [],
+                    in: { $concatArrays: ["$$value", "$$this"] },
+                  },
+                },
+              ],
+            },
           },
         },
       ]);
@@ -968,7 +996,9 @@ const shinyGET = async (req, res) => {
       /* RETURNS A LIST FOR THE ENC. GRAPH */
     } else if (req.query.encountersList) {
       query.totalEncounters = { $gt: 0 };
-      query.trainer = req.query.trainer
+      if (req.query.trainer) {
+        query.trainer = req.query.trainer;
+      }
       const encountersList = await Shiny.find(
         query,
         "totalEncounters stats method"
