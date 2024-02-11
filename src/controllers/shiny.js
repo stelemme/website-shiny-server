@@ -12,8 +12,6 @@ const shinyGET = async (req, res) => {
     });
 
     let query = {};
-    const sort = {};
-    sort.pokedexNo = "asc";
 
     const namesToCheck = ["Joaquin", "Korneel", "Simon", "Stef"];
     const months = [
@@ -927,6 +925,24 @@ const shinyGET = async (req, res) => {
       });
     }
 
+    /* RETURNS THE SHINY LIST */
+    if (req.query.shinyList) {
+      pipeline = pipeline.concat([
+        {
+          $group: {
+            _id: null,
+            names: { $addToSet: "$name" },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            names: 1,
+          },
+        },
+      ]);
+    }
+
     /* RETURNS GROUPS FOR RADAR */
     if (req.query.group) {
       const groups = await Shiny.distinct("group");
@@ -949,24 +965,10 @@ const shinyGET = async (req, res) => {
 
       res.json(result);
 
-      /* RETURNS THE SHINY LIST */
-    } else if (req.query.shinyList) {
-      const shinies = await Shiny.find(query, "name evolutions forms");
-      const shinyList = new Set();
-
-      shinies.forEach((shiny) => {
-        shinyList.add(shiny.name);
-
-        shiny.evolutions.forEach((evolution) => {
-          shinyList.add(evolution.name);
-        });
-      });
-
-      res.json(Array.from(shinyList));
-
       /* RETURNS A LIST FOR THE ENC. GRAPH */
     } else if (req.query.encountersList) {
       query.totalEncounters = { $gt: 0 };
+      query.trainer = req.query.trainer
       const encountersList = await Shiny.find(
         query,
         "totalEncounters stats method"

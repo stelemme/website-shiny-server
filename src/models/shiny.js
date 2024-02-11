@@ -57,6 +57,17 @@ shinySchema = new Schema({
     type: String,
     required: true
   },
+  geoLocation : {
+    name: {
+      type: String,
+    },
+    displayName: {
+      type: String,
+    },
+    position: [{
+      type: Number,
+    }],
+  },
   method: {
     name: {
       type: String,
