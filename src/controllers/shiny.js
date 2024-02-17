@@ -130,45 +130,6 @@ const shinyGET = async (req, res) => {
         {
           $replaceRoot: { newRoot: "$documents" },
         },
-        /* {
-          $addFields: {
-            nature: {
-              $cond: {
-                if: { $ifNull: ["$group", false] },
-                then: "-",
-                else: "$nature",
-              },
-            },
-            gender: {
-              $cond: {
-                if: { $ifNull: ["$group", false] },
-                then: "-",
-                else: "$gender",
-              },
-            },
-            ball: {
-              $cond: {
-                if: { $ifNull: ["$group", false] },
-                then: "-",
-                else: "$ball",
-              },
-            },
-            nickname: {
-              $cond: {
-                if: { $ifNull: ["$group", false] },
-                then: "-",
-                else: "$nickname",
-              },
-            },
-            IRLLocation: {
-              $cond: {
-                if: { $ifNull: ["$group", false] },
-                then: "-",
-                else: "$IRLLocation",
-              },
-            },
-          },
-        }, */
       ]);
     }
     if (req.query.preview === "counter") {
@@ -196,6 +157,7 @@ const shinyGET = async (req, res) => {
           endDate: 1,
           sprite: 1,
           trainer: 1,
+          IRLLocation: 1
         },
       });
     }
@@ -971,6 +933,61 @@ const shinyGET = async (req, res) => {
       ]);
     }
 
+    /* RETURNS GEOLOCATION LISTS */
+    if (req.query.geoLocationList) {
+      pipeline = [
+        {
+          $match: {
+            "geoLocation.position": { $exists: true, $type: "array" },
+            $expr: { $gt: [{ $size: "$geoLocation.position" }, 1] }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            geoLocation: { $addToSet: "$geoLocation" }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            geoLocation: 1
+          }
+        }
+      ];
+    }
+
+    /* RETURNS GEOLOCATION LISTS */
+    if (req.query.geoMapLocations) {
+      pipeline = pipeline.concat([
+        {
+          $match: {
+            "geoLocation.position": { $exists: true, $type: "array" },
+            $expr: { $gt: [{ $size: "$geoLocation.position" }, 1] }
+          }
+        },
+        {
+          $project: {
+            _id: 1,
+            geoLocation: 1,
+            trainer: 1,
+            name: 1
+          }
+        }
+      ]);
+    }
+
+    /* RETURNS GEOLOCATION LISTS */
+    if (req.query.geoMapLocationsMissing) {
+      pipeline = [
+        {
+          $match: {
+            geoLocation: { $exists: false }
+          }
+        }
+      ];
+    }
+
     /* RETURNS GROUPS FOR RADAR */
     if (req.query.group) {
       const groups = await Shiny.distinct("group");
@@ -1197,6 +1214,16 @@ const shinyIdPATCH = async (req, res) => {
               sprite: req.body.sprite,
             },
           },
+        },
+        { new: true }
+      );
+    }
+
+    if (req.query.action === "geoLocationsEdit") {
+      shiny = await Shiny.findOneAndUpdate(
+        { _id: shinyId },
+        {
+          geoLocation: req.body,
         },
         { new: true }
       );
