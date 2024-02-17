@@ -53,10 +53,6 @@ shinySchema = new Schema({
     type: String,
     required: true
   },
-  IRLLocation: {
-    type: String,
-    required: true
-  },
   geoLocation : {
     name: {
       type: String,

@@ -157,7 +157,6 @@ const shinyGET = async (req, res) => {
           endDate: 1,
           sprite: 1,
           trainer: 1,
-          IRLLocation: 1
         },
       });
     }
@@ -709,8 +708,8 @@ const shinyGET = async (req, res) => {
               { $sort: { count: -1 } },
               { $limit: 1 },
             ],
-            mostFrequentIRLLocation: [
-              { $group: { _id: "$IRLLocation", count: { $sum: 1 } } },
+            mostFrequentGeoLocation: [
+              { $group: { _id: "$geoLocation.name", count: { $sum: 1 } } },
               { $sort: { count: -1 } },
               { $limit: 1 },
             ],
@@ -772,8 +771,8 @@ const shinyGET = async (req, res) => {
             mostFrequentLocation: {
               $arrayElemAt: ["$mostFrequentLocation", 0],
             },
-            mostFrequentIRLLocation: {
-              $arrayElemAt: ["$mostFrequentIRLLocation", 0],
+            mostFrequentGeoLocation: {
+              $arrayElemAt: ["$mostFrequentGeoLocation", 0],
             },
             mostFrequentMethod: { $arrayElemAt: ["$mostFrequentMethod", 0] },
             leastFrequentMethod: { $arrayElemAt: ["$leastFrequentMethod", 0] },
@@ -939,21 +938,43 @@ const shinyGET = async (req, res) => {
         {
           $match: {
             "geoLocation.position": { $exists: true, $type: "array" },
-            $expr: { $gt: [{ $size: "$geoLocation.position" }, 1] }
-          }
+            $expr: { $gt: [{ $size: "$geoLocation.position" }, 1] },
+          },
         },
         {
           $group: {
             _id: null,
-            geoLocation: { $addToSet: "$geoLocation" }
-          }
+            geoLocation: { $addToSet: "$geoLocation" },
+          },
+        },
+        {
+          $unwind: "$geoLocation",
+        },
+        {
+          $unwind: "$geoLocation",
+        },
+        {
+          $match: {
+            "geoLocation.name": {
+              $nin: ["Bus", "Auto", "Trein"],
+            },
+          },
+        },
+        {
+          $sort: { "geoLocation.name": 1 },
+        },
+        {
+          $group: {
+            _id: null,
+            geoLocation: { $push: "$geoLocation" },
+          },
         },
         {
           $project: {
             _id: 0,
-            geoLocation: 1
-          }
-        }
+            geoLocation: 1,
+          },
+        },
       ];
     }
 
@@ -963,17 +984,17 @@ const shinyGET = async (req, res) => {
         {
           $match: {
             "geoLocation.position": { $exists: true, $type: "array" },
-            $expr: { $gt: [{ $size: "$geoLocation.position" }, 1] }
-          }
+            $expr: { $gt: [{ $size: "$geoLocation.position" }, 1] },
+          },
         },
         {
           $project: {
             _id: 1,
             geoLocation: 1,
             trainer: 1,
-            name: 1
-          }
-        }
+            name: 1,
+          },
+        },
       ]);
     }
 
@@ -982,9 +1003,9 @@ const shinyGET = async (req, res) => {
       pipeline = [
         {
           $match: {
-            geoLocation: { $exists: false }
-          }
-        }
+            geoLocation: { $exists: false },
+          },
+        },
       ];
     }
 
