@@ -98,7 +98,10 @@ const counterGET = async (req, res) => {
     }
 
     /* TOTAL ENCOUNTERS DURING A TIME PERIOD */
-    if (req.query.statsPeriodTotal) {
+    if (
+      req.query.statsPeriodTotal &&
+      req.query.statsPeriodTotal !== "yesterday"
+    ) {
       const currentDate = new Date();
 
       const startDate = new Date(currentDate);
@@ -107,6 +110,97 @@ const counterGET = async (req, res) => {
 
       const endDate = new Date(currentDate);
       endDate.setUTCHours(23, 59, 59, 999);
+
+      const pipeline = [
+        {
+          $match: {
+            encounters: {
+              $elemMatch: {
+                $gte: startDate,
+                $lt: endDate,
+              },
+            },
+          },
+        },
+        {
+          $unwind: "$encounters",
+        },
+        {
+          $match: {
+            encounters: {
+              $gte: startDate,
+              $lt: endDate,
+            },
+          },
+        },
+        {
+          $group: {
+            _id: "$trainer",
+            data: { $sum: 1 },
+          },
+        },
+        {
+          $sort: {
+            data: -1,
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            trainer: "$_id",
+            data: 1,
+          },
+        },
+      ];
+
+      function getTotalEncounters(trainerName, shinyData) {
+        const trainer = shinyData?.find(
+          (trainer) => trainer.trainer === trainerName
+        );
+        if (trainer) {
+          return trainer.data;
+        } else {
+          return 0;
+        }
+      }
+
+      result = await Counter.aggregate(pipeline).exec();
+      result2 = await Shiny.aggregate(pipeline).exec();
+
+      const trainersToCheck = ["Joaquin", "Korneel", "Simon", "Stef"];
+
+      trainersToCheck.forEach((trainerToCheck) => {
+        const existingEntry = result.find(
+          (entry) => entry.trainer === trainerToCheck
+        );
+
+        if (existingEntry) {
+          existingEntry.data += getTotalEncounters(trainerToCheck, result2);
+        } else {
+          result.push({
+            data: getTotalEncounters(trainerToCheck, result2),
+            trainer: trainerToCheck,
+          });
+        }
+      });
+
+      result.sort((a, b) => b.data - a.data);
+    }
+
+    /* TOTAL ENCOUNTERS DURING A TIME PERIOD (YESTERDAY)*/
+    if (
+      req.query.statsPeriodTotal &&
+      req.query.statsPeriodTotal === "yesterday"
+    ) {
+      const currentDate = new Date();
+
+      const startDate = new Date(currentDate);
+      startDate.setUTCHours(-1, 0, 0, 0);
+      startDate.setDate(startDate.getDate() - 1);
+
+      const endDate = new Date(currentDate);
+      endDate.setUTCHours(23, 59, 59, 999);
+      endDate.setDate(endDate.getDate() - 1);
 
       const pipeline = [
         {
@@ -244,6 +338,32 @@ const counterGET = async (req, res) => {
             _id: 0,
             trainer: "$_id",
             encounterData: 1,
+          },
+        },
+      ];
+
+      result = await Counter.aggregate(pipeline);
+    }
+
+    /* TOTAL CONVERTED ENCOUNTERS */
+    if (req.query.statsCountersConverted) {
+      const pipeline = [
+        {
+          $group: {
+            _id: "$trainer",
+            counter: {
+              $push: {
+                totalEncounters: "$totalEncounters",
+                method: "$method"
+              }
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            trainer: "$_id",
+            counter: 1,
           },
         },
       ];
