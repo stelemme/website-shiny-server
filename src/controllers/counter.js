@@ -354,8 +354,8 @@ const counterGET = async (req, res) => {
             counter: {
               $push: {
                 totalEncounters: "$totalEncounters",
-                method: "$method"
-              }
+                method: "$method",
+              },
             },
           },
         },
@@ -418,6 +418,41 @@ const counterGET = async (req, res) => {
       /* COUNTERS RESPONSE */
     } else if (result.length > 0) {
       res.json(result);
+    } else if (req.query.search) {
+      if (req.query.search === "false") {
+        res.json([]);
+      } else {
+        const result = await Counter.aggregate([
+          {
+            $search: {
+              index: "counters",
+              compound: {
+                should: [
+                  {
+                    autocomplete: {
+                      query: req.query.search,
+                      path: "name",
+                    },
+                  },
+                ],
+                minimumShouldMatch: 1,
+              },
+            },
+          },
+          { $limit: 50 },
+          {
+            $project: {
+              _id: 1,
+              name: 1,
+              sprite: 1,
+              trainer: 1,
+              totalEncounters: 1,
+            },
+          },
+        ]);
+
+        res.json(result);
+      }
     } else {
       const counters = await Counter.find(query, select).sort(sort);
 

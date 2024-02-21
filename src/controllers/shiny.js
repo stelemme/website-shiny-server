@@ -1149,6 +1149,7 @@ const shinyGET = async (req, res) => {
               name: 1,
               sprite: 1,
               trainer: 1,
+              totalEncounters: 1
             },
           },
         ]);
