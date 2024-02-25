@@ -104,7 +104,7 @@ const shinyGET = async (req, res) => {
     } else if (req.query.gen === "Gen 9") {
       pipeline.push({ $match: { pokedexNo: { $gt: 905 } } });
     }
-    if (req.query.groupShinies) {
+    if (req.query.groupShinies && !req.query.shinyList) {
       pipeline = pipeline.concat([
         {
           $group: {
@@ -157,6 +157,9 @@ const shinyGET = async (req, res) => {
           endDate: 1,
           sprite: 1,
           trainer: 1,
+          evolutions: 1,
+          forms: 1,
+          group: 1,
         },
       });
     }
@@ -1009,6 +1012,98 @@ const shinyGET = async (req, res) => {
       ];
     }
 
+    /* RETURNS LIST OF GROUP EVOLUTIONS */
+    if (req.query.groupShiniesEvolutions) {
+      pipeline = [
+        {
+          $match: { group: req.query.groupShiniesEvolutions },
+        },
+        {
+          $group: {
+            _id: null,
+            evolutions: { $addToSet: "$evolutions" },
+            forms: { $addToSet: "$forms" },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            evolutions: {
+              $reduce: {
+                input: "$evolutions",
+                initialValue: [],
+                in: { $concatArrays: ["$$value", "$$this"] },
+              },
+            },
+            forms: {
+              $reduce: {
+                input: "$forms",
+                initialValue: [],
+                in: { $concatArrays: ["$$value", "$$this"] },
+              },
+            },
+          },
+        },
+      ];
+    }
+
+    /* RETURNS LIST OF GROUPED POKéMONS */
+    if (req.query.groupShiniesPokemons) {
+      pipeline = [
+        {
+          $match: { group: req.query.groupShiniesPokemons },
+        },
+      ];
+    }
+
+    /* RETURNS THE NATURES COLLECTION */
+    if (req.query.natureCollection) {
+      pipeline = pipeline.concat([
+        {
+          $group: {
+            _id: "$nature",
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            data: { $push: { k: "$_id", v: "$count" } },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            natureCount: { $arrayToObject: "$data" },
+          },
+        },
+      ]);
+    }
+
+    /* RETURNS THE BALLS COLLECTION */
+    if (req.query.ballCollection) {
+      pipeline = pipeline.concat([
+        {
+          $group: {
+            _id: "$ball",
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            data: { $push: { k: "$_id", v: "$count" } },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            ballCount: { $arrayToObject: "$data" },
+          },
+        },
+      ]);
+    }
+
     /* RETURNS GROUPS FOR RADAR */
     if (req.query.group) {
       const groups = await Shiny.distinct("group");
@@ -1149,7 +1244,7 @@ const shinyGET = async (req, res) => {
               name: 1,
               sprite: 1,
               trainer: 1,
-              totalEncounters: 1
+              totalEncounters: 1,
             },
           },
         ]);
@@ -1230,7 +1325,7 @@ const shinyIdPATCH = async (req, res) => {
       shiny = await Shiny.findOneAndUpdate(
         { _id: shinyId },
         {
-          $push: {
+          $addToSet: {
             marks: {
               name: req.body.name,
               sprite: req.body.sprite,

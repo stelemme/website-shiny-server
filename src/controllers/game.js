@@ -4,7 +4,7 @@ const gameGET = async (req, res) => {
   try {
     let query = {};
     let select = "";
-    const sort = { sort: 1 }
+    const sort = { sort: 1 };
 
     /* FILTERS */
     if (req.query.name) {
@@ -22,16 +22,43 @@ const gameGET = async (req, res) => {
 
     /* GEN LIST */
     if (req.query.genList) {
-      const games = await Game.find(query, "gen").sort({gen: 1});
-      const genList = [...new Set(games.map(game => game.gen))];
+      const games = await Game.find(query, "gen").sort({ gen: 1 });
+      const genList = [...new Set(games.map((game) => game.gen))];
 
       res.json(genList);
+    } else if (req.query.ballList) {
+      const result = await Game.aggregate([
+        {
+          $unwind: "$balls",
+        },
+        {
+          $replaceRoot: { newRoot: "$balls" },
+        },
+        {
+          $group: {
+            _id: {
+              name: "$name",
+              sprite: "$sprite",
+            },
+          },
+        },
+        {
+          $replaceRoot: { newRoot: "$_id" },
+        },
+        {
+            $sort: {
+                name: 1
+            }
+        }
+      ]);
+
+      res.json(result);
     } else if (req.query.backup) {
       const result = await Game.aggregate([
         {
           $project: {
             _id: 0,
-            __v: 0
+            __v: 0,
           },
         },
       ]);
@@ -46,7 +73,7 @@ const gameGET = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-}
+};
 
 const gameIdGET = async (req, res) => {
   try {
@@ -72,5 +99,5 @@ const gameIdGET = async (req, res) => {
 
 module.exports = {
   gameGET,
-  gameIdGET
+  gameIdGET,
 };
