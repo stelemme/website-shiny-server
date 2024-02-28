@@ -46,10 +46,17 @@ const gameGET = async (req, res) => {
           $replaceRoot: { newRoot: "$_id" },
         },
         {
-            $sort: {
-                name: 1
-            }
-        }
+          $group: {
+            _id: null,
+            data: { $push: { k: "$name", v: "$sprite" } },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            ballsprites: { $arrayToObject: "$data" },
+          },
+        },
       ]);
 
       res.json(result);
