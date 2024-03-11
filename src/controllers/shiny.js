@@ -1057,7 +1057,7 @@ const shinyGET = async (req, res) => {
     }
 
     /* RETURNS THE NATURES COLLECTION */
-    if (req.query.natureCollection) {
+    if (req.query.collection === "nature") {
       pipeline = pipeline.concat([
         {
           $group: {
@@ -1065,23 +1065,11 @@ const shinyGET = async (req, res) => {
             count: { $sum: 1 },
           },
         },
-        {
-          $group: {
-            _id: null,
-            data: { $push: { k: "$_id", v: "$count" } },
-          },
-        },
-        {
-          $project: {
-            _id: 0,
-            natureCount: { $arrayToObject: "$data" },
-          },
-        },
       ]);
     }
 
     /* RETURNS THE BALLS COLLECTION */
-    if (req.query.ballCollection) {
+    if (req.query.collection === "ball") {
       pipeline = pipeline.concat([
         {
           $group: {
@@ -1089,6 +1077,72 @@ const shinyGET = async (req, res) => {
             count: { $sum: 1 },
           },
         },
+      ]);
+    }
+
+    /* RETURNS THE ALOLANS COLLECTION */
+    if (req.query.collection === "alola") {
+      pipeline = pipeline.concat([
+        {
+          $match: {
+            $or: [{ name: /Alolan/i }, { "evolutions.name": /Alolan/i }],
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            names: { $push: "$name" },
+            evolutionNames: {
+              $push: {
+                $map: { input: "$evolutions", as: "evo", in: "$$evo.name" },
+              },
+            },
+            formNames: {
+              $push: {
+                $map: { input: "$forms", as: "form", in: "$$form.name" },
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            names: {
+              $setUnion: [
+                "$names",
+                {
+                  $reduce: {
+                    input: "$evolutionNames",
+                    initialValue: [],
+                    in: { $concatArrays: ["$$value", "$$this"] },
+                  },
+                },
+                {
+                  $reduce: {
+                    input: "$formNames",
+                    initialValue: [],
+                    in: { $concatArrays: ["$$value", "$$this"] },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        {
+          $unwind: "$names",
+        },
+        {
+          $group: {
+            _id: "$names",
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+    }
+
+    /* RETURNS THE COLLECTION */
+    if (req.query.collection) {
+      pipeline = pipeline.concat([
         {
           $group: {
             _id: null,
@@ -1098,7 +1152,7 @@ const shinyGET = async (req, res) => {
         {
           $project: {
             _id: 0,
-            ballCount: { $arrayToObject: "$data" },
+            collectionData: { $arrayToObject: "$data" },
           },
         },
       ]);
