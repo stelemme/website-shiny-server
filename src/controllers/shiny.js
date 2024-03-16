@@ -104,7 +104,11 @@ const shinyGET = async (req, res) => {
     } else if (req.query.gen === "Gen 9") {
       pipeline.push({ $match: { pokedexNo: { $gt: 905 } } });
     }
-    if (req.query.groupShinies && !req.query.shinyList) {
+    if (
+      req.query.groupShinies &&
+      !req.query.shinyList &&
+      !req.query.collection
+    ) {
       pipeline = pipeline.concat([
         {
           $group: {
@@ -1080,12 +1084,156 @@ const shinyGET = async (req, res) => {
       ]);
     }
 
+    /* RETURNS THE MEGAS COLLECTION */
+    if (req.query.collection === "mega") {
+      pipeline = pipeline.concat([
+        {
+          $match: {
+            $or: [{ "forms.name": /Mega/i }, { "forms.name": /Primal/i }],
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            formNames: {
+              $push: {
+                $map: { input: "$forms", as: "form", in: "$$form.name" },
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            names: {
+              $setUnion: [
+                {
+                  $reduce: {
+                    input: "$formNames",
+                    initialValue: [],
+                    in: { $concatArrays: ["$$value", "$$this"] },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        {
+          $unwind: "$names",
+        },
+        {
+          $group: {
+            _id: "$names",
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+    }
+
+    /* RETURNS THE GMAX COLLECTION */
+    if (req.query.collection === "gmax") {
+      pipeline = pipeline.concat([
+        {
+          $match: {
+            $or: [{ "forms.name": /Gigantamax/i }],
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            formNames: {
+              $push: {
+                $map: { input: "$forms", as: "form", in: "$$form.name" },
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            names: {
+              $setUnion: [
+                {
+                  $reduce: {
+                    input: "$formNames",
+                    initialValue: [],
+                    in: { $concatArrays: ["$$value", "$$this"] },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        {
+          $unwind: "$names",
+        },
+        {
+          $group: {
+            _id: "$names",
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+    }
+
     /* RETURNS THE ALOLANS COLLECTION */
     if (req.query.collection === "alola") {
       pipeline = pipeline.concat([
         {
           $match: {
             $or: [{ name: /Alolan/i }, { "evolutions.name": /Alolan/i }],
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            names: { $push: "$name" },
+            evolutionNames: {
+              $push: {
+                $map: { input: "$evolutions", as: "evo", in: "$$evo.name" },
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            names: {
+              $setUnion: [
+                "$names",
+                {
+                  $reduce: {
+                    input: "$evolutionNames",
+                    initialValue: [],
+                    in: { $concatArrays: ["$$value", "$$this"] },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        {
+          $unwind: "$names",
+        },
+        {
+          $group: {
+            _id: "$names",
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+    }
+
+    /* RETURNS THE GALARIAN COLLECTION */
+    if (req.query.collection === "galar") {
+      pipeline = pipeline.concat([
+        {
+          $match: {
+            $or: [
+              { name: /Galarian/i },
+              { "evolutions.name": /Galarian/i },
+              { "forms.name": /Galarian/i },
+            ],
           },
         },
         {
@@ -1120,6 +1268,183 @@ const shinyGET = async (req, res) => {
                 {
                   $reduce: {
                     input: "$formNames",
+                    initialValue: [],
+                    in: { $concatArrays: ["$$value", "$$this"] },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        {
+          $unwind: "$names",
+        },
+        {
+          $group: {
+            _id: "$names",
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+    }
+
+    /* RETURNS THE PALDEAN COLLECTION */
+    if (req.query.collection === "hisui") {
+      pipeline = pipeline.concat([
+        {
+          $match: {
+            $or: [
+              { name: /Hisuian/i },
+              { "evolutions.name": /Hisuian/i },
+              { "forms.name": /Hisuian/i },
+            ],
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            names: { $push: "$name" },
+            evolutionNames: {
+              $push: {
+                $map: { input: "$evolutions", as: "evo", in: "$$evo.name" },
+              },
+            },
+            formNames: {
+              $push: {
+                $map: { input: "$forms", as: "form", in: "$$form.name" },
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            names: {
+              $setUnion: [
+                "$names",
+                {
+                  $reduce: {
+                    input: "$evolutionNames",
+                    initialValue: [],
+                    in: { $concatArrays: ["$$value", "$$this"] },
+                  },
+                },
+                {
+                  $reduce: {
+                    input: "$formNames",
+                    initialValue: [],
+                    in: { $concatArrays: ["$$value", "$$this"] },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        {
+          $unwind: "$names",
+        },
+        {
+          $group: {
+            _id: "$names",
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+    }
+
+    /* RETURNS THE PALDEAN COLLECTION */
+    if (req.query.collection === "paldea") {
+      pipeline = pipeline.concat([
+        {
+          $match: {
+            $or: [{ name: /Paldean/i }, { "evolutions.name": /Paldean/i }],
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            names: { $push: "$name" },
+            evolutionNames: {
+              $push: {
+                $map: { input: "$evolutions", as: "evo", in: "$$evo.name" },
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            names: {
+              $setUnion: [
+                "$names",
+                {
+                  $reduce: {
+                    input: "$evolutionNames",
+                    initialValue: [],
+                    in: { $concatArrays: ["$$value", "$$this"] },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        {
+          $unwind: "$names",
+        },
+        {
+          $group: {
+            _id: "$names",
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+    }
+
+    /* RETURNS THE EEVEELUTION COLLECTION */
+    if (req.query.collection === "eevee") {
+      pipeline = pipeline.concat([
+        {
+          $match: {
+            $or: [
+              { name: /Jolteon/i },
+              { name: /Vaporeon/i },
+              { name: /Flareon/i },
+              { name: /Umbreon/i },
+              { name: /Espeon/i },
+              { name: /Leafeon/i },
+              { name: /Glaceon/i },
+              { name: /Sylveon/i },
+              { "evolutions.name": /Jolteon/i },
+              { "evolutions.name": /Vaporeon/i },
+              { "evolutions.name": /Flareon/i },
+              { "evolutions.name": /Umbreon/i },
+              { "evolutions.name": /Espeon/i },
+              { "evolutions.name": /Leafeon/i },
+              { "evolutions.name": /Glaceon/i },
+              { "evolutions.name": /Sylveon/i },
+            ],
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            names: { $push: "$name" },
+            evolutionNames: {
+              $push: {
+                $map: { input: "$evolutions", as: "evo", in: "$$evo.name" },
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            names: {
+              $setUnion: [
+                "$names",
+                {
+                  $reduce: {
+                    input: "$evolutionNames",
                     initialValue: [],
                     in: { $concatArrays: ["$$value", "$$this"] },
                   },
