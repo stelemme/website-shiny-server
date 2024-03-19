@@ -1,6 +1,5 @@
-const Pokedex = require("../models/pokedex");
-const Game = require("../models/game");
-const axios = require("axios");
+const Pokedex = require("../../models/pokedex");
+const Game = require("../../models/game");
 
 const pokedexGET = async (req, res) => {
   try {
@@ -93,7 +92,7 @@ const pokedexGET = async (req, res) => {
       const forms = [];
 
       for (const form of pokemon[0].forms) {
-        console.log(form)
+        console.log(form);
         if (formList.includes(form.name)) {
           forms.push(form);
         }
@@ -147,6 +146,4 @@ const pokedexGET = async (req, res) => {
   }
 };
 
-module.exports = {
-  pokedexGET,
-};
+module.exports = pokedexGET;

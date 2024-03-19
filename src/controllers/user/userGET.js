@@ -1,4 +1,4 @@
-const User = require("../models/user");
+const User = require("../../models/user");
 
 const userGET = async (req, res) => {
   try {
@@ -12,14 +12,14 @@ const userGET = async (req, res) => {
 
     /* RETURNS A LIST OF USERS */
     if (req.query.userList) {
-      const userList = await User.find({}, 'user')
-      const names = userList.map(user => user.user);
+      const userList = await User.find({}, "user");
+      const names = userList.map((user) => user.user);
 
       res.json(names);
     } else {
       /* USER RESPONSE */
       const user = await User.findOne(query, select);
-      
+
       res.json(user);
     }
   } catch (err) {
@@ -27,6 +27,4 @@ const userGET = async (req, res) => {
   }
 };
 
-module.exports = {
-  userGET,
-};
+module.exports = userGET;
